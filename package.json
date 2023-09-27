@@ -1,0 +1,14 @@
+{
+  "name": "my_own_chart",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "scripts": {
+    "dev": "npx tsc-watch chart.ts"
+  },
+  "dependencies": {
+    "tsc-watch": "^6.0.4",
+    "tsnd": "^1.1.0",
+    "typescript": "^5.2.2"
+  }
+}
