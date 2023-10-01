@@ -202,7 +202,7 @@ const initialize_chart = (options: OptionsType): ChartType => {
 
       for (let i = 0; i < get_lines.length; i++) {
 
-        let coords_of_line = [] as Array<{ x: number, y: number }>;
+        let coords_of_line = [];
 
         for (let y = 0; y < get_lines[i].data.length; y++) {
 
@@ -222,59 +222,73 @@ const initialize_chart = (options: OptionsType): ChartType => {
         ctx.beginPath();
         ctx.moveTo(0, enabled_max_height);
 
-        // coords_of_line.unshift({ x: 0, y: enabled_max_height });
-        // coords_of_line.push({ x: options.chart.width, y: enabled_max_height });
+        coords_of_line.unshift({ x: 0, y: enabled_max_height });
+        coords_of_line.unshift({ x: 0, y: enabled_max_height });
+        coords_of_line.push({ x: options.chart.width, y: enabled_max_height });
 
-        // const reorganize_points = (coords: Array<{ x: number, y: number }>) => {
+        const reorganize_points = (coords: Array<{ x: number, y: number }>) => {
 
-        //   let reorganized = [];
+          let reorganized = [];
 
-        //   for (let x = 0; x < coords.length - 2; x += 2) {
+          for (let x = 0; x < coords.length - 1; x += 1) {
 
-        //     reorganized.push([
-        //       coords[x],
-        //       coords[x + 1],
-        //       coords[x + 2]
-        //     ])
+            reorganized.push([
+              coords[x],
+              coords[x + 1],
+              coords[x + 2]
+            ])
 
-        //   }
+          }
 
-        //   return reorganized;
-
-        // } 
-
-        // const points = reorganize_points(coords_of_line);
-
-        // for (let i = 0; i < points.length; i++) {
-
-        //   const p1 = points[i][0];
-        //   const pc = points[i][1];
-        //   const p2 = points[i][2];
-
-        //   const tmpx1 = p1.x - pc.x;
-        //   const tmpx2 = p2.x - pc.x;
-        //   const tmpy1 = p1.y - pc.y;
-        //   const tmpy2 = p2.y - pc.y;
-
-        //   const dist1 = Math.sqrt(tmpx1*tmpx1+tmpy1*tmpy1);
-        //   const dist2 = Math.sqrt(tmpx2*tmpx2+tmpy2*tmpy2);
-
-        //   const tmpx = pc.x-Math.sqrt(dist1*dist2)*(tmpx1/dist1+tmpx2/dist2)/2;
-        //   const tmpy = pc.y-Math.sqrt(dist1*dist2)*(tmpy1/dist1+tmpy2/dist2)/2;
-
-        //   ctx.quadraticCurveTo(tmpx, tmpy, p2.x, p2.y);
-
-        //   ctx.quadraticCurveTo(pc.x, pc.y, p2.x, p2.y)
-
-        // }
-
-        for (const coord of coords_of_line) {
-
-          ctx.lineTo(coord.x, coord.y);
+          return reorganized;
 
         }
 
-        ctx.lineTo(options.chart.width, enabled_max_height);
+        const points = reorganize_points(coords_of_line);
+
+        const getControlPoints = (x0: number, y0: number, x1: number, y1: number, x2: number, y2: number, t: number): number[] => {
+
+          const d01 = Math.sqrt(Math.pow(x1 - x0, 2) + Math.pow(y1 - y0, 2));
+          const d12 = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+
+          const fa = t * d01 / (d01 + d12);
+          const fb = t * d12 / (d01 + d12);
+
+          const p1x = x1 - fa * (x2 - x0);
+          const p1y = y1 - fa * (y2 - y0);
+          const p2x = x1 + fb * (x2 - x0);
+          const p2y = y1 + fb * (y2 - y0);
+
+          return [p1x, p1y, p2x, p2y];
+
+        }
+
+        const tension = 0.5;
+
+        for (let i = 0; i < points.length - 1; i++) {
+          
+          const p1_1 = points[i][0];
+          const p1_c = points[i][1];
+          const p1_2 = points[i][2] || { x: options.chart.width, y: enabled_max_height };
+
+          const p2_1 = points[i + 1][0];
+          const p2_c = points[i + 1][1];
+          const p2_2 = points[i + 1][2] || { x: options.chart.width, y: enabled_max_height };
+
+          const [cp1_1x, cp1_1y, cp1_2x, cp1_2y] = getControlPoints(p1_1.x, p1_1.y, p1_c.x, p1_c.y, p1_2.x, p1_2.y, tension);
+          const [cp2_1x, cp2_1y, cp2_2x, cp2_2y] = getControlPoints(p2_1.x, p2_1.y, p2_c.x, p2_c.y, p2_2.x, p2_2.y, tension);
+
+          ctx.bezierCurveTo(cp1_2x, cp1_2y, cp2_1x, cp2_1y, p1_2.x, p1_2.y);
+
+        }
+
+        // for (const coord of coords_of_line) {
+
+        //   ctx.lineTo(coord.x, coord.y);
+
+        // }
+
+        // ctx.lineTo(options.chart.width, enabled_max_height);
         ctx.stroke();
 
         for (const coord of coords_of_line) {

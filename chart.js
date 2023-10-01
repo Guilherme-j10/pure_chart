@@ -129,43 +129,51 @@ var initialize_chart = function (options) {
                 ctx.lineWidth = 2.5;
                 ctx.beginPath();
                 ctx.moveTo(0, enabled_max_height);
-                // coords_of_line.unshift({ x: 0, y: enabled_max_height });
-                // coords_of_line.push({ x: options.chart.width, y: enabled_max_height });
-                // const reorganize_points = (coords: Array<{ x: number, y: number }>) => {
-                //   let reorganized = [];
-                //   for (let x = 0; x < coords.length - 2; x += 2) {
-                //     reorganized.push([
-                //       coords[x],
-                //       coords[x + 1],
-                //       coords[x + 2]
-                //     ])
-                //   }
-                //   return reorganized;
-                // } 
-                // const points = reorganize_points(coords_of_line);
-                // for (let i = 0; i < points.length; i++) {
-                //   const p1 = points[i][0];
-                //   const pc = points[i][1];
-                //   const p2 = points[i][2];
-                //   const tmpx1 = p1.x - pc.x;
-                //   const tmpx2 = p2.x - pc.x;
-                //   const tmpy1 = p1.y - pc.y;
-                //   const tmpy2 = p2.y - pc.y;
-                //   const dist1 = Math.sqrt(tmpx1*tmpx1+tmpy1*tmpy1);
-                //   const dist2 = Math.sqrt(tmpx2*tmpx2+tmpy2*tmpy2);
-                //   const tmpx = pc.x-Math.sqrt(dist1*dist2)*(tmpx1/dist1+tmpx2/dist2)/2;
-                //   const tmpy = pc.y-Math.sqrt(dist1*dist2)*(tmpy1/dist1+tmpy2/dist2)/2;
-                //   ctx.quadraticCurveTo(tmpx, tmpy, p2.x, p2.y);
-                //   ctx.quadraticCurveTo(pc.x, pc.y, p2.x, p2.y)
+                coords_of_line.unshift({ x: 0, y: enabled_max_height });
+                coords_of_line.unshift({ x: 0, y: enabled_max_height });
+                coords_of_line.push({ x: options.chart.width, y: enabled_max_height });
+                var reorganize_points = function (coords) {
+                    var reorganized = [];
+                    for (var x = 0; x < coords.length - 1; x += 1) {
+                        reorganized.push([
+                            coords[x],
+                            coords[x + 1],
+                            coords[x + 2]
+                        ]);
+                    }
+                    return reorganized;
+                };
+                var points = reorganize_points(coords_of_line);
+                var getControlPoints = function (x0, y0, x1, y1, x2, y2, t) {
+                    var d01 = Math.sqrt(Math.pow(x1 - x0, 2) + Math.pow(y1 - y0, 2));
+                    var d12 = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+                    var fa = t * d01 / (d01 + d12);
+                    var fb = t * d12 / (d01 + d12);
+                    var p1x = x1 - fa * (x2 - x0);
+                    var p1y = y1 - fa * (y2 - y0);
+                    var p2x = x1 + fb * (x2 - x0);
+                    var p2y = y1 + fb * (y2 - y0);
+                    return [p1x, p1y, p2x, p2y];
+                };
+                var tension = 0.5;
+                for (var i_1 = 0; i_1 < points.length - 1; i_1++) {
+                    var p1_1 = points[i_1][0];
+                    var p1_c = points[i_1][1];
+                    var p1_2 = points[i_1][2] || { x: options.chart.width, y: enabled_max_height };
+                    var p2_1 = points[i_1 + 1][0];
+                    var p2_c = points[i_1 + 1][1];
+                    var p2_2 = points[i_1 + 1][2] || { x: options.chart.width, y: enabled_max_height };
+                    var _a = getControlPoints(p1_1.x, p1_1.y, p1_c.x, p1_c.y, p1_2.x, p1_2.y, tension), cp1_1x = _a[0], cp1_1y = _a[1], cp1_2x = _a[2], cp1_2y = _a[3];
+                    var _b = getControlPoints(p2_1.x, p2_1.y, p2_c.x, p2_c.y, p2_2.x, p2_2.y, tension), cp2_1x = _b[0], cp2_1y = _b[1], cp2_2x = _b[2], cp2_2y = _b[3];
+                    ctx.bezierCurveTo(cp1_2x, cp1_2y, cp2_1x, cp2_1y, p1_2.x, p1_2.y);
+                }
+                // for (const coord of coords_of_line) {
+                //   ctx.lineTo(coord.x, coord.y);
                 // }
+                // ctx.lineTo(options.chart.width, enabled_max_height);
+                ctx.stroke();
                 for (var _i = 0, coords_of_line_1 = coords_of_line; _i < coords_of_line_1.length; _i++) {
                     var coord = coords_of_line_1[_i];
-                    ctx.lineTo(coord.x, coord.y);
-                }
-                ctx.lineTo(options.chart.width, enabled_max_height);
-                ctx.stroke();
-                for (var _a = 0, coords_of_line_2 = coords_of_line; _a < coords_of_line_2.length; _a++) {
-                    var coord = coords_of_line_2[_a];
                     ctx.fillStyle = '#fff';
                     ctx.beginPath();
                     ctx.arc(coord.x, coord.y, 3, 0, Math.PI * 2);
