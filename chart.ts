@@ -283,17 +283,36 @@ const initialize_chart = (options: OptionsType): ChartType => {
             let [cp2_1x, cp2_1y, cp2_2x, cp2_2y] = getControlPoints(p2_1.x, p2_1.y, p2_c.x, p2_c.y, p2_2.x, p2_2.y, tension);
 
             if (p1_c.y === p1_2.y && p1_c.y === enabled_max_height) {
-              
+
               cp2_1y = p1_c.y;
               cp1_2y = p1_c.y;
 
             } else {
 
-              if (p1_2.y === enabled_max_height)
-                cp2_1y = p1_2.y;
+              const limit_curve_on_base = (y: number) => {
 
-              if (p1_c.y === enabled_max_height)
-                cp1_2y = p1_c.y + 5;
+                const limit = 20;
+
+                if (y > (enabled_max_height - limit) && y < enabled_max_height) return true;
+
+                return false;
+
+              };
+
+              if (p1_c.y === enabled_max_height && limit_curve_on_base(p1_2.y)) {
+
+                cp1_2y = p1_c.y;
+                cp2_1y = p1_c.y + 5;
+
+              } else {
+
+                if (p1_2.y === enabled_max_height)
+                  cp2_1y = p1_2.y;
+
+                if (p1_c.y === enabled_max_height)
+                  cp1_2y = p1_c.y + 5;
+
+              }
 
             }
 

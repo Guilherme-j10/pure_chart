@@ -172,10 +172,22 @@ var initialize_chart = function (options) {
                             cp1_2y = p1_c.y;
                         }
                         else {
-                            if (p1_2.y === enabled_max_height)
-                                cp2_1y = p1_2.y;
-                            if (p1_c.y === enabled_max_height)
-                                cp1_2y = p1_c.y + 5;
+                            var limit_curve_on_base = function (y) {
+                                var limit = 20;
+                                if (y > (enabled_max_height - limit) && y < enabled_max_height)
+                                    return true;
+                                return false;
+                            };
+                            if (p1_c.y === enabled_max_height && limit_curve_on_base(p1_2.y)) {
+                                cp1_2y = p1_c.y;
+                                cp2_1y = p1_c.y + 5;
+                            }
+                            else {
+                                if (p1_2.y === enabled_max_height)
+                                    cp2_1y = p1_2.y;
+                                if (p1_c.y === enabled_max_height)
+                                    cp1_2y = p1_c.y + 5;
+                            }
                         }
                         ctx.bezierCurveTo(cp1_2x, cp1_2y, cp2_1x, cp2_1y, p1_2.x, p1_2.y);
                     }
