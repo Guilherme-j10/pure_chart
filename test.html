@@ -219,7 +219,7 @@
           ctx.strokeStyle = hexToCanvasColor(color, 0.75);
           ctx.beginPath();
           ctx.moveTo(pts[i], pts[i + 1]);
-          
+
           const previows = { x: pts[i], y: pts[i + 1] }
           const current_points = { x: pts[i + 2], y: pts[i + 3] };
           const next_points = { x: pts[i + 4], y: pts[i + 5] };
@@ -227,20 +227,28 @@
 
           let cp1 = { x: cp[2 * i - 2], y: cp[2 * i - 1] };
           let cp2 = { x: cp[2 * i], y: cp[2 * i + 1] };
-          
-          //console.log(previows, current_points, next_points);
+
+          console.log(previows, current_points, next_points);
+
+          if (previows.y === current_points.y) {
+
+            cp2.y = previows.y;
+            cp1.y = current_points.y;
+
+          }
+
+
           if (current_points.y === next_points.y) {
 
-            //cp1.y = next_points.y;
+            cp1.y = previows.y;
 
           }
 
-          if (next_points.y === next_points_2.y) {
+          // if (previows.y === current_points.y && current_points.y === next_points.y) {
 
-            cp2.y = next_points.y;
-            cp2.x = current_points.x - 6;
+          //   cp1.y = next_points.y;
 
-          }
+          // }
 
           ctx.bezierCurveTo(cp1.x, cp1.y, cp2.x, cp2.y, current_points.x, current_points.y);
 
@@ -318,9 +326,9 @@
       //   the tension is t (typically 0.33 to 0.5), and true/false tells whether tow
       //   connect the endpoints of the data to make a closed curve.
       // drawSpline(ctx, [20, 50, 100, 100, 150, 50, 200, 150, 250, 50, 300, 70, 310, 130, 380, 30], t, false);
-      drawSpline(ctx, [20, 50, 100, 100, 150, 50, 200, 270, 250, 90, 270, 190, 350, 190, 395, 190], t, false);
+      drawSpline(ctx, [1, 50, 10, 50, 25, 70, 40, 50, 90, 50, 100, 100, 150, 50, 200, 270, 250, 90, 270, 190, 350, 190, 395, 190], t, false);
       // drawSpline(ctx, [50, 200, 150, 200, 150, 300, 50, 300], t, true);
-       // drawSpline(ctx, [260, 240, 360, 240, 310, 340], t, true);
+      // drawSpline(ctx, [260, 240, 360, 240, 310, 340], t, true);
       //   Update the passive display of tension t.
       document.getElementById("t").value = Math.round(1000 * t) / 1000;
     }

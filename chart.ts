@@ -8,6 +8,7 @@ type OptionsType = {
     data: number[]
   }>,
   colors: string[],
+  smooth?: boolean,
   labels?: string[],
   chart: {
     width: number,
@@ -155,6 +156,7 @@ const initialize_chart = (options: OptionsType): ChartType => {
     },
     draw_columns() {
 
+      const padding_top = 22;
       const get_columns = options.series.filter(data => data.data_type === 'column');
       const calc_spikes_pos = options.chart.width / options.series[0].data.length;
       const diff_from_base = Math.abs(options.chart.height - this.line_base_height);
@@ -182,7 +184,7 @@ const initialize_chart = (options: OptionsType): ChartType => {
 
         for (let z = 0; z < get_columns.length; z++) {
 
-          const chart_height_column = interpolation(options.series[z].data[x], [0, max_height], [2, enabled_max_height]);
+          const chart_height_column = interpolation(options.series[z].data[x], [0, max_height], [2, enabled_max_height - padding_top]);
 
           this.draw_element({
             color: options.colors[z],
@@ -206,7 +208,7 @@ const initialize_chart = (options: OptionsType): ChartType => {
 
         for (let y = 0; y < get_lines[i].data.length; y++) {
 
-          const chart_height_column = interpolation(get_lines[i].data[y], [0, max_height], [0, enabled_max_height]);
+          const chart_height_column = interpolation(get_lines[i].data[y], [0, max_height], [0, enabled_max_height - padding_top]);
           const calc_y = Math.abs(chart_height_column - enabled_max_height);
 
           const pinter_x = calc_spikes_pos * y;
@@ -217,78 +219,102 @@ const initialize_chart = (options: OptionsType): ChartType => {
         }
 
         ctx.strokeStyle = get_lines[i].color as string;
-        ctx.lineWidth = 2.5;
+        ctx.lineWidth = 3;
 
         ctx.beginPath();
         ctx.moveTo(0, enabled_max_height);
 
-        coords_of_line.unshift({ x: 0, y: enabled_max_height });
-        coords_of_line.unshift({ x: 0, y: enabled_max_height });
-        coords_of_line.push({ x: options.chart.width, y: enabled_max_height });
+        if (options?.smooth) {
 
-        const reorganize_points = (coords: Array<{ x: number, y: number }>) => {
+          coords_of_line.unshift({ x: 0, y: enabled_max_height });
+          coords_of_line.unshift({ x: 0, y: enabled_max_height });
+          coords_of_line.push({ x: options.chart.width, y: enabled_max_height });
 
-          let reorganized = [];
+          const reorganize_points = (coords: Array<{ x: number, y: number }>) => {
 
-          for (let x = 0; x < coords.length - 1; x += 1) {
+            let reorganized = [];
 
-            reorganized.push([
-              coords[x],
-              coords[x + 1],
-              coords[x + 2]
-            ])
+            for (let x = 0; x < coords.length - 1; x += 1) {
+
+              reorganized.push([
+                coords[x],
+                coords[x + 1],
+                coords[x + 2]
+              ])
+
+            }
+
+            return reorganized;
 
           }
 
-          return reorganized;
+          const points = reorganize_points(coords_of_line);
+
+          const getControlPoints = (x0: number, y0: number, x1: number, y1: number, x2: number, y2: number, t: number): number[] => {
+
+            const d01 = Math.sqrt(Math.pow(x1 - x0, 2) + Math.pow(y1 - y0, 2));
+            const d12 = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+
+            const fa = t * d01 / (d01 + d12);
+            const fb = t * d12 / (d01 + d12);
+
+            const p1x = x1 - fa * (x2 - x0);
+            const p1y = y1 - fa * (y2 - y0);
+            const p2x = x1 + fb * (x2 - x0);
+            const p2y = y1 + fb * (y2 - y0);
+
+            return [p1x, p1y, p2x, p2y];
+
+          }
+
+          const tension = 0.35;
+
+          for (let i = 0; i < points.length - 1; i++) {
+
+            const p1_1 = points[i][0];
+            const p1_c = points[i][1];
+            const p1_2 = points[i][2] || { x: options.chart.width, y: enabled_max_height };
+
+            const p2_1 = points[i + 1][0];
+            const p2_c = points[i + 1][1];
+            const p2_2 = points[i + 1][2] || { x: options.chart.width, y: enabled_max_height };
+
+            let [cp1_1x, cp1_1y, cp1_2x, cp1_2y] = getControlPoints(p1_1.x, p1_1.y, p1_c.x, p1_c.y, p1_2.x, p1_2.y, tension);
+            let [cp2_1x, cp2_1y, cp2_2x, cp2_2y] = getControlPoints(p2_1.x, p2_1.y, p2_c.x, p2_c.y, p2_2.x, p2_2.y, tension);
+
+            if (p1_c.y === p1_2.y && p1_c.y === enabled_max_height) {
+              
+              cp2_1y = p1_c.y;
+              cp1_2y = p1_c.y;
+
+            } else {
+
+              if (p1_2.y === enabled_max_height)
+                cp2_1y = p1_2.y;
+
+              if (p1_c.y === enabled_max_height)
+                cp1_2y = p1_c.y + 5;
+
+            }
+
+            ctx.bezierCurveTo(cp1_2x, cp1_2y, cp2_1x, cp2_1y, p1_2.x, p1_2.y);
+
+          }
 
         }
 
-        const points = reorganize_points(coords_of_line);
+        if (!options?.smooth) {
 
-        const getControlPoints = (x0: number, y0: number, x1: number, y1: number, x2: number, y2: number, t: number): number[] => {
+          for (const coord of coords_of_line) {
 
-          const d01 = Math.sqrt(Math.pow(x1 - x0, 2) + Math.pow(y1 - y0, 2));
-          const d12 = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+            ctx.lineTo(coord.x, coord.y);
 
-          const fa = t * d01 / (d01 + d12);
-          const fb = t * d12 / (d01 + d12);
+          }
 
-          const p1x = x1 - fa * (x2 - x0);
-          const p1y = y1 - fa * (y2 - y0);
-          const p2x = x1 + fb * (x2 - x0);
-          const p2y = y1 + fb * (y2 - y0);
-
-          return [p1x, p1y, p2x, p2y];
+          ctx.lineTo(options.chart.width, enabled_max_height);
 
         }
 
-        const tension = 0.5;
-
-        for (let i = 0; i < points.length - 1; i++) {
-          
-          const p1_1 = points[i][0];
-          const p1_c = points[i][1];
-          const p1_2 = points[i][2] || { x: options.chart.width, y: enabled_max_height };
-
-          const p2_1 = points[i + 1][0];
-          const p2_c = points[i + 1][1];
-          const p2_2 = points[i + 1][2] || { x: options.chart.width, y: enabled_max_height };
-
-          const [cp1_1x, cp1_1y, cp1_2x, cp1_2y] = getControlPoints(p1_1.x, p1_1.y, p1_c.x, p1_c.y, p1_2.x, p1_2.y, tension);
-          const [cp2_1x, cp2_1y, cp2_2x, cp2_2y] = getControlPoints(p2_1.x, p2_1.y, p2_c.x, p2_c.y, p2_2.x, p2_2.y, tension);
-
-          ctx.bezierCurveTo(cp1_2x, cp1_2y, cp2_1x, cp2_1y, p1_2.x, p1_2.y);
-
-        }
-
-        // for (const coord of coords_of_line) {
-
-        //   ctx.lineTo(coord.x, coord.y);
-
-        // }
-
-        // ctx.lineTo(options.chart.width, enabled_max_height);
         ctx.stroke();
 
         for (const coord of coords_of_line) {
