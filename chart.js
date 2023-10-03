@@ -88,7 +88,7 @@ var initialize_chart = function (options) {
             var get_columns = options.series.filter(function (data) { return data.data_type === 'column'; });
             var calc_spikes_pos = options.chart.width / options.series[0].data.length;
             var diff_from_base = Math.abs(options.chart.height - this.line_base_height);
-            var padding_space = interpolation(options.series.length, [0, 1000], [5, 30]);
+            var padding_space = interpolation(options.series.length, [0, 50], [5, 30]);
             var complete_column_width = calc_spikes_pos - padding_space;
             var space_by_each_column = Math.abs(complete_column_width / get_columns.length);
             var get_lines = options.series.filter(function (data) { return data.data_type === 'line'; });
@@ -146,11 +146,11 @@ var initialize_chart = function (options) {
                         return reorganized;
                     };
                     var points = reorganize_points(coords_of_line);
-                    var getControlPoints = function (x0, y0, x1, y1, x2, y2, t) {
-                        var d01 = Math.sqrt(Math.pow(x1 - x0, 2) + Math.pow(y1 - y0, 2));
-                        var d12 = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
-                        var fa = t * d01 / (d01 + d12);
-                        var fb = t * d12 / (d01 + d12);
+                    var get_control_points = function (x0, y0, x1, y1, x2, y2, t) {
+                        var d1 = Math.sqrt(Math.pow(x1 - x0, 2) + Math.pow(y1 - y0, 2));
+                        var d2 = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+                        var fa = t * d1 / (d1 + d2);
+                        var fb = t * d2 / (d1 + d2);
                         var p1x = x1 - fa * (x2 - x0);
                         var p1y = y1 - fa * (y2 - y0);
                         var p2x = x1 + fb * (x2 - x0);
@@ -165,8 +165,8 @@ var initialize_chart = function (options) {
                         var p2_1 = points[i_1 + 1][0];
                         var p2_c = points[i_1 + 1][1];
                         var p2_2 = points[i_1 + 1][2] || { x: options.chart.width, y: enabled_max_height };
-                        var _a = getControlPoints(p1_1.x, p1_1.y, p1_c.x, p1_c.y, p1_2.x, p1_2.y, tension), cp1_1x = _a[0], cp1_1y = _a[1], cp1_2x = _a[2], cp1_2y = _a[3];
-                        var _b = getControlPoints(p2_1.x, p2_1.y, p2_c.x, p2_c.y, p2_2.x, p2_2.y, tension), cp2_1x = _b[0], cp2_1y = _b[1], cp2_2x = _b[2], cp2_2y = _b[3];
+                        var _a = get_control_points(p1_1.x, p1_1.y, p1_c.x, p1_c.y, p1_2.x, p1_2.y, tension), cp1_1x = _a[0], cp1_1y = _a[1], cp1_2x = _a[2], cp1_2y = _a[3];
+                        var _b = get_control_points(p2_1.x, p2_1.y, p2_c.x, p2_c.y, p2_2.x, p2_2.y, tension), cp2_1x = _b[0], cp2_1y = _b[1], cp2_2x = _b[2], cp2_2y = _b[3];
                         if (p1_c.y === p1_2.y && p1_c.y === enabled_max_height) {
                             cp2_1y = p1_c.y;
                             cp1_2y = p1_c.y;
@@ -230,7 +230,7 @@ var initialize_chart = function (options) {
                 var column = _b[_i];
                 if (column.is_activate) {
                     var middle_space_width = options.chart.width / 2;
-                    var is_left = column.pos.x < middle_space_width ? true : false; //the rendering pointer is to the left in relation to the total half of the canvas
+                    var is_left = column.pos.x < middle_space_width ? true : false;
                     var min_height_by_line = 30;
                     var padding = 10;
                     var tip_w = max_length + (padding * 2);

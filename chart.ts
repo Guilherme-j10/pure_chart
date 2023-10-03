@@ -161,7 +161,7 @@ const initialize_chart = (options: OptionsType): ChartType => {
       const calc_spikes_pos = options.chart.width / options.series[0].data.length;
       const diff_from_base = Math.abs(options.chart.height - this.line_base_height);
 
-      const padding_space = interpolation(options.series.length, [0, 1000], [5, 30]);
+      const padding_space = interpolation(options.series.length, [0, 50], [5, 30]);
       const complete_column_width = calc_spikes_pos - padding_space;
       const space_by_each_column = Math.abs(complete_column_width / get_columns.length);
 
@@ -250,13 +250,13 @@ const initialize_chart = (options: OptionsType): ChartType => {
 
           const points = reorganize_points(coords_of_line);
 
-          const getControlPoints = (x0: number, y0: number, x1: number, y1: number, x2: number, y2: number, t: number): number[] => {
+          const get_control_points = (x0: number, y0: number, x1: number, y1: number, x2: number, y2: number, t: number): number[] => {
 
-            const d01 = Math.sqrt(Math.pow(x1 - x0, 2) + Math.pow(y1 - y0, 2));
-            const d12 = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+            const d1 = Math.sqrt(Math.pow(x1 - x0, 2) + Math.pow(y1 - y0, 2));
+            const d2 = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
 
-            const fa = t * d01 / (d01 + d12);
-            const fb = t * d12 / (d01 + d12);
+            const fa = t * d1 / (d1 + d2);
+            const fb = t * d2 / (d1 + d2);
 
             const p1x = x1 - fa * (x2 - x0);
             const p1y = y1 - fa * (y2 - y0);
@@ -279,8 +279,8 @@ const initialize_chart = (options: OptionsType): ChartType => {
             const p2_c = points[i + 1][1];
             const p2_2 = points[i + 1][2] || { x: options.chart.width, y: enabled_max_height };
 
-            let [cp1_1x, cp1_1y, cp1_2x, cp1_2y] = getControlPoints(p1_1.x, p1_1.y, p1_c.x, p1_c.y, p1_2.x, p1_2.y, tension);
-            let [cp2_1x, cp2_1y, cp2_2x, cp2_2y] = getControlPoints(p2_1.x, p2_1.y, p2_c.x, p2_c.y, p2_2.x, p2_2.y, tension);
+            let [cp1_1x, cp1_1y, cp1_2x, cp1_2y] = get_control_points(p1_1.x, p1_1.y, p1_c.x, p1_c.y, p1_2.x, p1_2.y, tension);
+            let [cp2_1x, cp2_1y, cp2_2x, cp2_2y] = get_control_points(p2_1.x, p2_1.y, p2_c.x, p2_c.y, p2_2.x, p2_2.y, tension);
 
             if (p1_c.y === p1_2.y && p1_c.y === enabled_max_height) {
 
@@ -375,7 +375,7 @@ const initialize_chart = (options: OptionsType): ChartType => {
         if (column.is_activate) {
 
           const middle_space_width = options.chart.width / 2;
-          const is_left = column.pos.x < middle_space_width ? true : false; //the rendering pointer is to the left in relation to the total half of the canvas
+          const is_left = column.pos.x < middle_space_width ? true : false;
           const min_height_by_line = 30;
           const padding = 10;
 
