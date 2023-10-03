@@ -17,10 +17,30 @@ var initialize_chart = function (options) {
     var interpolation = function (value, input, output) {
         return output[0] + (((value - input[0]) / (input[1] - input[0])) * (output[1] - output[0]));
     };
+    var check_data_integrity = function () {
+        var amount_data = options.series[0].data.length;
+        var success = true;
+        for (var _i = 0, _a = options.series; _i < _a.length; _i++) {
+            var data = _a[_i];
+            if (data.data.length === amount_data)
+                continue;
+            success = false;
+            break;
+        }
+        if (success && !amount_data) {
+            for (var i = 0; i < options.series.length; i++) {
+                options.series[i].data = Array.from({ length: 12 }).map(function () { return 0; });
+            }
+        }
+        return success;
+    };
     var chart = {
         line_base_height: options.chart.height - 25,
         size_text: 11,
         size_text_tip: 13,
+        padding_top: 22,
+        enable_height: 0,
+        min_width: (options === null || options === void 0 ? void 0 : options.disable_sparklines) ? 0 : 30,
         current_labels: [],
         chart_column_pos: [],
         draw_element: function (load) {
@@ -41,15 +61,15 @@ var initialize_chart = function (options) {
         draw_base_chart: function () {
             this.draw_element({
                 color: '#ffffff2d',
-                coords: { h: 1.5, w: options.chart.width, x: 0, y: this.line_base_height }
+                coords: { h: 1.5, w: options.chart.width - this.min_width, x: this.min_width, y: this.line_base_height }
             });
         },
         draw_spikes: function () {
             var _a;
-            var calculate_spikes = options.chart.width / options.series[0].data.length;
+            var calculate_spikes = (options.chart.width - this.min_width) / options.series[0].data.length;
             for (var i = 0; i < options.series[0].data.length; i++) {
                 var initial_point = calculate_spikes * i;
-                var middle = initial_point + (calculate_spikes / 2);
+                var middle = initial_point + (calculate_spikes / 2) + this.min_width;
                 var label_content = ((_a = options === null || options === void 0 ? void 0 : options.labels) === null || _a === void 0 ? void 0 : _a.length) ? options.labels[i] : "".concat(i + 1);
                 this.draw_element({
                     color: '#ffffff',
@@ -84,18 +104,18 @@ var initialize_chart = function (options) {
             return max_values.reduce(function (acc, val) { return acc > val ? acc : val; }, 0);
         },
         draw_columns: function () {
-            var padding_top = 22;
             var get_columns = options.series.filter(function (data) { return data.data_type === 'column'; });
-            var calc_spikes_pos = options.chart.width / options.series[0].data.length;
+            var calc_spikes_pos = (options.chart.width - this.min_width) / options.series[0].data.length;
             var diff_from_base = Math.abs(options.chart.height - this.line_base_height);
             var padding_space = interpolation(options.series.length, [0, 50], [5, 30]);
             var complete_column_width = calc_spikes_pos - padding_space;
             var space_by_each_column = Math.abs(complete_column_width / get_columns.length);
             var get_lines = options.series.filter(function (data) { return data.data_type === 'line'; });
             var enabled_max_height = options.chart.height - diff_from_base - 10;
+            this.enable_height = enabled_max_height;
             var max_height = this.calculate_max_val();
             for (var x = 0; x < options.series[0].data.length; x++) {
-                var initial_point = calc_spikes_pos * x;
+                var initial_point = (calc_spikes_pos * x) + this.min_width;
                 var initial_point_more_padding = initial_point + (padding_space / 2);
                 var start_point = initial_point_more_padding;
                 this.chart_column_pos.push({
@@ -104,7 +124,7 @@ var initialize_chart = function (options) {
                     pos: { x: initial_point, y: 0, h: enabled_max_height, w: calc_spikes_pos }
                 });
                 for (var z = 0; z < get_columns.length; z++) {
-                    var chart_height_column = interpolation(options.series[z].data[x], [0, max_height], [2, enabled_max_height - padding_top]);
+                    var chart_height_column = interpolation(options.series[z].data[x], [0, max_height], [2, enabled_max_height - (padding_space / 2)]);
                     this.draw_element({
                         color: options.colors[z],
                         coords: {
@@ -120,16 +140,16 @@ var initialize_chart = function (options) {
             for (var i = 0; i < get_lines.length; i++) {
                 var coords_of_line = [];
                 for (var y = 0; y < get_lines[i].data.length; y++) {
-                    var chart_height_column = interpolation(get_lines[i].data[y], [0, max_height], [0, enabled_max_height - padding_top]);
+                    var chart_height_column = interpolation(get_lines[i].data[y], [0, max_height], [0, enabled_max_height - this.padding_top]);
                     var calc_y = Math.abs(chart_height_column - enabled_max_height);
                     var pinter_x = calc_spikes_pos * y;
                     var middle_pointer_x = pinter_x + (calc_spikes_pos / 2);
-                    coords_of_line.push({ x: middle_pointer_x, y: calc_y });
+                    coords_of_line.push({ x: middle_pointer_x + this.min_width, y: calc_y });
                 }
                 ctx.strokeStyle = get_lines[i].color;
                 ctx.lineWidth = 3;
                 ctx.beginPath();
-                ctx.moveTo(0, enabled_max_height);
+                ctx.moveTo(this.min_width, enabled_max_height);
                 if (options === null || options === void 0 ? void 0 : options.smooth) {
                     coords_of_line.unshift({ x: 0, y: enabled_max_height });
                     coords_of_line.unshift({ x: 0, y: enabled_max_height });
@@ -178,15 +198,20 @@ var initialize_chart = function (options) {
                                     return true;
                                 return false;
                             };
+                            if (p1_2.y === enabled_max_height && limit_curve_on_base(p1_c.y)) {
+                                cp1_2y = p1_2.y;
+                                cp2_1y = p1_2.y;
+                                cp2_1x = p1_2.x - ((70 / 100) * Math.abs(p1_c.x - p1_2.x));
+                            }
                             if (p1_c.y === enabled_max_height && limit_curve_on_base(p1_2.y)) {
                                 cp1_2y = p1_c.y;
                                 cp2_1y = p1_c.y + 5;
                             }
                             else {
                                 if (p1_2.y === enabled_max_height)
-                                    cp2_1y = p1_2.y;
+                                    cp2_1y = p1_2.y + 3;
                                 if (p1_c.y === enabled_max_height)
-                                    cp1_2y = p1_c.y + 5;
+                                    cp1_2y = p1_c.y + 3;
                             }
                         }
                         ctx.bezierCurveTo(cp1_2x, cp1_2y, cp2_1x, cp2_1y, p1_2.x, p1_2.y);
@@ -202,6 +227,8 @@ var initialize_chart = function (options) {
                 ctx.stroke();
                 for (var _c = 0, coords_of_line_2 = coords_of_line; _c < coords_of_line_2.length; _c++) {
                     var coord = coords_of_line_2[_c];
+                    if (coord.x <= 0 || coord.x >= options.chart.width)
+                        continue;
                     ctx.fillStyle = '#fff';
                     ctx.beginPath();
                     ctx.arc(coord.x, coord.y, 3, 0, Math.PI * 2);
@@ -219,6 +246,39 @@ var initialize_chart = function (options) {
                         coords: { h: column.pos.h, w: column.pos.w, x: column.pos.x, y: column.pos.y }
                     });
                 }
+            }
+        },
+        draw_side_left_height_data: function () {
+            var min_space = 25;
+            var get_max_value = this.calculate_max_val();
+            var loops = this.enable_height / min_space;
+            var increaser = get_max_value / loops;
+            var vertical_data = [0];
+            this.draw_element({
+                color: '#ffffff2d',
+                coords: { w: 1.5, h: this.enable_height + 10, x: this.min_width, y: 0 }
+            });
+            for (var x = 0; x < loops; x++)
+                vertical_data.push(vertical_data[vertical_data.length - 1] + increaser);
+            for (var i = 0; i < vertical_data.length; i++) {
+                console.log(vertical_data[i]);
+                var position_y = interpolation(vertical_data[i], [0, get_max_value], [this.enable_height, 15]);
+                this.draw_element({
+                    color: '#fff',
+                    coords: { h: 1, w: 7, x: this.min_width - 7, y: position_y }
+                });
+                this.draw_element({
+                    color: '#ffffff',
+                    text: {
+                        content: "".concat(parseInt(vertical_data[i])),
+                        px: this.size_text,
+                        aling: 'right',
+                        coords: {
+                            x: this.min_width - this.size_text,
+                            y: position_y + (this.size_text / 3)
+                        }
+                    }
+                });
             }
         },
         draw_tooltip: function () {
@@ -287,6 +347,7 @@ var initialize_chart = function (options) {
         chart.draw_spikes();
         chart.draw_columns();
         chart.draw_tooltip();
+        chart.draw_side_left_height_data();
     };
     var disable_all_columns = function () {
         for (var _i = 0, _a = chart.chart_column_pos; _i < _a.length; _i++) {
@@ -307,12 +368,17 @@ var initialize_chart = function (options) {
         }
         draw_everything();
     };
-    canvas.addEventListener('mousemove', on_mouse_move);
-    canvas.addEventListener('mouseout', disable_all_columns);
+    var data_is_ok = check_data_integrity();
+    if (!data_is_ok)
+        console.error('Check your provided data.');
+    if (data_is_ok) {
+        draw_everything();
+        canvas.addEventListener('mousemove', on_mouse_move);
+        canvas.addEventListener('mouseout', disable_all_columns);
+    }
     var destroy_canvas_listeners = function () {
         canvas.removeEventListener('mousemove', on_mouse_move);
         canvas.removeEventListener('mouseout', disable_all_columns);
     };
-    draw_everything();
     return { destroy: destroy_canvas_listeners };
 };
