@@ -39,14 +39,12 @@
       smooth: true,
       disable_sparklines: false,
       label_tip: 'Dia: ',
-      //labels: ['24/9', '25/9', '26/9', '27/9', '28/9', '29/9', '30/9'],
       series: [
-        {
-          data_label: 'Saudação',
-          data_type: 'column',
-          data: [10,0,0,112,0,0,0,0],
-          //data: Array.from({ length: size }).map(() => Math.floor(Math.random() * 50))
-        },
+        // {
+        //   data_label: 'Saudação',
+        //   data_type: 'column',
+        //   data: Array.from({ length: size }).map(() => Math.floor(Math.random() * 50))
+        // },
         // {
         //   data_label: 'Propaganda',
         //   data_type: 'column',
@@ -67,13 +65,13 @@
           data_label: 'Conversão',
           data_type: 'line',
           color: '#be45ff',
-          data: [0,0,0,112,0,0,0,0]
+          data: [0, 10, 5, 5, 0],
           //data: Array.from({ length: size }).map(() => Math.floor(Math.random() * 120))
         }
       ],
       chart: {
         width: 810,
-        height: 500
+        height: 520
       }
     };
 

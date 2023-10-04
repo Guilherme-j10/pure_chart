@@ -93,6 +93,7 @@ const initialize_chart = (options: OptionsType): ChartType => {
     size_text: 11,
     size_text_tip: 13,
     padding_top: 22,
+    margin_borders: 10,
     enable_height: 0,
     min_width: options?.disable_sparklines ? 0 : 30,
     current_labels: [] as string[],
@@ -137,12 +138,12 @@ const initialize_chart = (options: OptionsType): ChartType => {
     },
     draw_spikes() {
 
-      const calculate_spikes = (options.chart.width - this.min_width) / options.series[0].data.length;
+      const calculate_spikes = (options.chart.width - (this.min_width + this.margin_borders)) / options.series[0].data.length;
 
       for (let i = 0; i < options.series[0].data.length; i++) {
 
         const initial_point = calculate_spikes * i;
-        const middle = initial_point + (calculate_spikes / 2) + this.min_width;
+        const middle = initial_point + (calculate_spikes / 2) + (this.min_width + this.margin_borders);
         const label_content = options?.labels?.length ? options.labels[i] : `${i + 1}`;
 
         this.draw_element({
@@ -189,8 +190,8 @@ const initialize_chart = (options: OptionsType): ChartType => {
     draw_columns() {
 
       const get_columns = options.series.filter(data => data.data_type === 'column');
-      const calc_spikes_pos = (options.chart.width - this.min_width) / options.series[0].data.length;
-      const diff_from_base = Math.abs(options.chart.height - this.line_base_height);
+      const calc_spikes_pos = (options.chart.width - (this.min_width + this.margin_borders)) / options.series[0].data.length;
+      //const diff_from_base = Math.abs(options.chart.height - this.line_base_height);
 
       const padding_space = interpolation(options.series.length, [0, 50], [5, 30]);
       const complete_column_width = calc_spikes_pos - padding_space;
@@ -198,25 +199,26 @@ const initialize_chart = (options: OptionsType): ChartType => {
 
       const get_lines = options.series.filter(data => data.data_type === 'line');
 
-      const enabled_max_height = options.chart.height - diff_from_base - 10;
-      this.enable_height = enabled_max_height;
-      const max_height = this.calculate_max_val();
+      //const enabled_max_height = options.chart.height - diff_from_base - this.margin_borders;
+      //this.enable_height = enabled_max_height;
+      const max_enabled_value = this.calculate_max_value_enabled();
+      const max_height = this.calculate_max_val();//max_enabled_value.get_max_value;
 
       for (let x = 0; x < options.series[0].data.length; x++) {
 
-        const initial_point = (calc_spikes_pos * x) + this.min_width;
+        const initial_point = (calc_spikes_pos * x) + this.min_width + this.margin_borders;
         const initial_point_more_padding = initial_point + (padding_space / 2);
         let start_point = initial_point_more_padding;
 
         this.chart_column_pos.push({
           index: x,
           is_activate: false,
-          pos: { x: initial_point, y: 0, h: enabled_max_height, w: calc_spikes_pos }
+          pos: { x: initial_point, y: 0, h: this.enable_height, w: calc_spikes_pos }
         });
 
         for (let z = 0; z < get_columns.length; z++) {
 
-          const chart_height_column = interpolation(options.series[z].data[x], [0, max_height], [2, enabled_max_height - (padding_space / 2)]);
+          const chart_height_column = interpolation(options.series[z].data[x], [0, max_height], [2, this.enable_height - (padding_space / 2)]);
 
           this.draw_element({
             color: options.colors[z],
@@ -224,7 +226,7 @@ const initialize_chart = (options: OptionsType): ChartType => {
               h: chart_height_column,
               w: space_by_each_column,
               x: start_point,
-              y: Math.abs(enabled_max_height - chart_height_column)
+              y: Math.abs(this.enable_height - chart_height_column)
             }
           });
 
@@ -240,13 +242,13 @@ const initialize_chart = (options: OptionsType): ChartType => {
 
         for (let y = 0; y < get_lines[i].data.length; y++) {
 
-          const chart_height_column = interpolation(get_lines[i].data[y], [0, max_height], [0, enabled_max_height - this.padding_top]);
-          const calc_y = Math.abs(chart_height_column - enabled_max_height);
+          const chart_height_column = interpolation(get_lines[i].data[y], [0, max_height], [0, this.enable_height - 5]);
+          const calc_y = Math.abs(chart_height_column - this.enable_height);
 
           const pinter_x = calc_spikes_pos * y;
           const middle_pointer_x = pinter_x + (calc_spikes_pos / 2);
 
-          coords_of_line.push({ x: middle_pointer_x + this.min_width, y: calc_y });
+          coords_of_line.push({ x: middle_pointer_x + (this.min_width + this.margin_borders), y: calc_y });
 
         }
 
@@ -254,13 +256,13 @@ const initialize_chart = (options: OptionsType): ChartType => {
         ctx.lineWidth = 3;
 
         ctx.beginPath();
-        ctx.moveTo(this.min_width, enabled_max_height);
+        ctx.moveTo((this.min_width + this.margin_borders), this.enable_height);
 
         if (options?.smooth) {
 
-          coords_of_line.unshift({ x: 0, y: enabled_max_height });
-          coords_of_line.unshift({ x: 0, y: enabled_max_height });
-          coords_of_line.push({ x: options.chart.width, y: enabled_max_height });
+          coords_of_line.unshift({ x: this.margin_borders, y: this.enable_height });
+          coords_of_line.unshift({ x: this.margin_borders, y: this.enable_height });
+          coords_of_line.push({ x: options.chart.width, y: this.enable_height });
 
           const reorganize_points = (coords: Array<{ x: number, y: number }>) => {
 
@@ -305,16 +307,22 @@ const initialize_chart = (options: OptionsType): ChartType => {
 
             const p1_1 = points[i][0];
             const p1_c = points[i][1];
-            const p1_2 = points[i][2] || { x: options.chart.width, y: enabled_max_height };
+            const p1_2 = points[i][2] || { x: options.chart.width, y: this.enable_height };
 
             const p2_1 = points[i + 1][0];
             const p2_c = points[i + 1][1];
-            const p2_2 = points[i + 1][2] || { x: options.chart.width, y: enabled_max_height };
+            const p2_2 = points[i + 1][2] || { x: options.chart.width, y: this.enable_height };
 
             let [cp1_1x, cp1_1y, cp1_2x, cp1_2y] = get_control_points(p1_1.x, p1_1.y, p1_c.x, p1_c.y, p1_2.x, p1_2.y, tension);
             let [cp2_1x, cp2_1y, cp2_2x, cp2_2y] = get_control_points(p2_1.x, p2_1.y, p2_c.x, p2_c.y, p2_2.x, p2_2.y, tension);
 
-            if (p1_c.y === p1_2.y && p1_c.y === enabled_max_height) {
+            if (p1_1.x === this.margin_borders) {
+
+              cp1_2x = cp1_2x + 10;
+
+            }
+
+            if (p1_c.y === p1_2.y && p1_c.y === this.enable_height) {
 
               cp2_1y = p1_c.y;
               cp1_2y = p1_c.y;
@@ -325,13 +333,13 @@ const initialize_chart = (options: OptionsType): ChartType => {
 
                 const limit = 20;
 
-                if (y > (enabled_max_height - limit) && y < enabled_max_height) return true;
+                if (y > (this.enable_height - limit) && y < this.enable_height) return true;
 
                 return false;
 
               };
 
-              if (p1_2.y === enabled_max_height && limit_curve_on_base(p1_c.y)) {
+              if (p1_2.y === this.enable_height && limit_curve_on_base(p1_c.y)) {
 
                 cp1_2y = p1_2.y;
                 cp2_1y = p1_2.y;
@@ -339,17 +347,17 @@ const initialize_chart = (options: OptionsType): ChartType => {
 
               }
 
-              if (p1_c.y === enabled_max_height && limit_curve_on_base(p1_2.y)) {
+              if (p1_c.y === this.enable_height && limit_curve_on_base(p1_2.y)) {
 
                 cp1_2y = p1_c.y;
                 cp2_1y = p1_c.y + 5;
 
               } else {
 
-                if (p1_2.y === enabled_max_height)
+                if (p1_2.y === this.enable_height)
                   cp2_1y = p1_2.y + 3;
 
-                if (p1_c.y === enabled_max_height)
+                if (p1_c.y === this.enable_height)
                   cp1_2y = p1_c.y + 3;
 
               }
@@ -370,7 +378,7 @@ const initialize_chart = (options: OptionsType): ChartType => {
 
           }
 
-          ctx.lineTo(options.chart.width, enabled_max_height);
+          ctx.lineTo(options.chart.width, this.enable_height);
 
         }
 
@@ -378,7 +386,7 @@ const initialize_chart = (options: OptionsType): ChartType => {
 
         for (const coord of coords_of_line) {
 
-          if (coord.x <= 0 || coord.x >= options.chart.width) continue;
+          if (coord.x <= 0 || coord.x >= options.chart.width || coord.x === this.margin_borders) continue;
 
           ctx.fillStyle = '#fff';
           ctx.beginPath();
@@ -407,30 +415,61 @@ const initialize_chart = (options: OptionsType): ChartType => {
       }
 
     },
-    draw_side_left_height_data() {
+    calculate_max_value_enabled() {
 
       const min_space = 25;
-      const get_max_value = this.calculate_max_val();
-      const loops = this.enable_height / min_space;
-      const increaser = get_max_value / loops;
+      let get_max_value = this.calculate_max_val();
+      const loops = (this.enable_height) / min_space;
+      let increaser = get_max_value / loops;
       let vertical_data = [0];
-
-      this.draw_element({
-        color: '#ffffff2d',
-        coords: { w: 1.5, h: this.enable_height + 10, x: this.min_width, y: 0 }
-      })
 
       for (let x = 0; x < loops; x++)
         vertical_data.push(vertical_data[vertical_data.length - 1] + increaser);
 
-      for (let i = 0; i < vertical_data.length; i++) {
+      get_max_value = vertical_data.reduce((acc, val) => acc > val ? acc : val, 0);
 
-        console.log(vertical_data[i]);
+      return { get_max_value, vertical_data };
+
+    },
+    draw_side_left_height_data() {
+
+      const draw_xaxis = true;
+      const dashed_enabled = true;
+      const diff_from_base = Math.abs(options.chart.height - this.line_base_height);
+      this.enable_height = options.chart.height - diff_from_base - this.margin_borders;
+
+      const { get_max_value, vertical_data } = this.calculate_max_value_enabled();
+
+      this.min_width = (`${parseInt(get_max_value as any)}`.length * this.size_text) + (this.size_text / 2);
+
+      this.draw_element({
+        color: '#ffffff2d',
+        coords: { w: 1.5, h: this.enable_height + this.margin_borders, x: this.min_width, y: 0 }
+      });
+
+      const normalize_values = (current_val: number) => {
+
+        const length_max_number = `${parseInt(get_max_value as any)}`.length;
+        const length_current_val = `${current_val}`.length;
+        let normalized_value = `${current_val}`;
+
+        if (length_max_number > length_current_val) {
+
+          const diff = length_max_number - length_current_val;
+          normalized_value = `${Array.from({ length: diff }).map(() => 0).join('')}${current_val}`
+
+        }
+
+        return normalized_value;
+
+      }
+
+      for (let i = 0; i < vertical_data.length; i++) {
 
         const position_y = interpolation(
           vertical_data[i],
           [0, get_max_value],
-          [this.enable_height, 15]
+          [this.enable_height, 0]
         );
 
         this.draw_element({
@@ -441,15 +480,46 @@ const initialize_chart = (options: OptionsType): ChartType => {
         this.draw_element({
           color: '#ffffff',
           text: {
-            content: `${parseInt(vertical_data[i] as any)}`,
+            content: `${normalize_values(parseInt(vertical_data[i] as any))}`,
             px: this.size_text,
             aling: 'right',
             coords: {
               x: this.min_width - this.size_text,
-              y: position_y + (this.size_text / 3)
+              y: position_y + (this.size_text - 3)
             }
           }
-        })
+        });
+
+        if (draw_xaxis) {
+
+          if (!dashed_enabled) {
+            
+            this.draw_element({
+              color: '#ffffff2d',
+              coords: { h: 1, w: options.chart.width, x: this.min_width - 7, y: position_y }
+            });
+
+            continue;
+
+          }
+
+          const space_by = 5;
+          const w_dash = 5;
+          const loops_count = options.chart.width / ((w_dash + space_by));
+          let current_x_pos = this.min_width;
+
+          for (let z = 0; z < loops_count; z++) {
+
+            this.draw_element({
+              color: '#ffffff2d',
+              coords: { h: 1, w: w_dash, x: current_x_pos, y: position_y }
+            });
+
+            current_x_pos += (w_dash + space_by);
+
+          }
+
+        }
 
       }
 
@@ -490,7 +560,7 @@ const initialize_chart = (options: OptionsType): ChartType => {
               aling: 'left',
               content: `${options.label_tip}${this.current_labels[column.index]}`,
               px: this.size_text_tip,
-              coords: { x: pos_x_base + 10, y: pos_y_base + 18 }
+              coords: { x: pos_x_base + padding, y: pos_y_base + 18 }
             }
           });
 
@@ -511,13 +581,13 @@ const initialize_chart = (options: OptionsType): ChartType => {
                 aling: 'left',
                 content: `${options.series[i].data_label}: ${options.series[i].data[column.index]}`,
                 px: this.size_text_tip,
-                coords: { x: pos_x_base + 20, y: pos_y_labels - 10 }
+                coords: { x: pos_x_base + 20, y: pos_y_labels - padding }
               }
             });
 
             ctx.fillStyle = options.series[i]?.color || options.colors[i];
             ctx.beginPath();
-            ctx.arc(pos_x_base + 10, pos_y_labels - 15, 5, 0, Math.PI * 2);
+            ctx.arc(pos_x_base + padding, pos_y_labels - 15, 5, 0, Math.PI * 2);
             ctx.fill();
             ctx.closePath();
 
@@ -534,12 +604,12 @@ const initialize_chart = (options: OptionsType): ChartType => {
 
     ctx.clearRect(0, 0, options.chart.width, options.chart.height);
 
+    chart.draw_side_left_height_data();
     chart.draw_activate_hover_columns();
     chart.draw_base_chart();
     chart.draw_spikes();
     chart.draw_columns();
     chart.draw_tooltip();
-    chart.draw_side_left_height_data();
 
   }
 
