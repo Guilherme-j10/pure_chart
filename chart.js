@@ -47,10 +47,10 @@ var initialize_chart = function (options) {
         draw_element: function (load) {
             var _a, _b, _c, _d, _e, _f, _g, _h, _j;
             ctx.fillStyle = load.color;
-            ctx.shadowColor = '#1111119e';
-            ctx.shadowBlur = 5;
-            ctx.shadowOffsetX = 0;
-            ctx.shadowOffsetY = 0;
+            //ctx.shadowColor = '#1111119e';
+            //ctx.shadowBlur = 5;
+            //ctx.shadowOffsetX = 0;
+            //ctx.shadowOffsetY = 0;
             if (!Object.keys((load === null || load === void 0 ? void 0 : load.text) || {}).length && Object.keys((load === null || load === void 0 ? void 0 : load.coords) || {}).length)
                 ctx.fillRect((_a = load.coords) === null || _a === void 0 ? void 0 : _a.x, (_b = load.coords) === null || _b === void 0 ? void 0 : _b.y, (_c = load.coords) === null || _c === void 0 ? void 0 : _c.w, (_d = load.coords) === null || _d === void 0 ? void 0 : _d.h);
             if (Object.keys((load === null || load === void 0 ? void 0 : load.text) || {}).length) {
@@ -105,7 +105,6 @@ var initialize_chart = function (options) {
             return max_values.reduce(function (acc, val) { return acc > val ? acc : val; }, 0);
         },
         draw_columns: function () {
-            var _this = this;
             var get_columns = options.series.filter(function (data) { return data.data_type === 'column'; });
             var calc_spikes_pos = (options.chart.width - (this.min_width + this.margin_borders)) / options.series[0].data.length;
             //const diff_from_base = Math.abs(options.chart.height - this.line_base_height);
@@ -152,76 +151,90 @@ var initialize_chart = function (options) {
                 ctx.strokeStyle = get_lines[i].color;
                 ctx.lineWidth = 3;
                 ctx.beginPath();
-                ctx.moveTo((this.min_width + this.margin_borders), this.enable_height);
+                //ctx.moveTo((this.min_width + this.margin_borders), this.enable_height);
                 if (options === null || options === void 0 ? void 0 : options.smooth) {
-                    coords_of_line.unshift({ x: this.margin_borders, y: this.enable_height });
-                    coords_of_line.unshift({ x: this.margin_borders, y: this.enable_height });
+                    coords_of_line.unshift({ x: (this.min_width + this.margin_borders), y: this.enable_height });
+                    coords_of_line.unshift({ x: (this.min_width + this.margin_borders), y: this.enable_height });
                     coords_of_line.push({ x: options.chart.width, y: this.enable_height });
-                    var reorganize_points = function (coords) {
-                        var reorganized = [];
-                        for (var x = 0; x < coords.length - 1; x += 1) {
-                            reorganized.push([
-                                coords[x],
-                                coords[x + 1],
-                                coords[x + 2]
-                            ]);
-                        }
-                        return reorganized;
+                    var hermit_interpolation = function (x, x1, y1, x2, y2) {
+                        var t = (x - x1) / (x2 - x1);
+                        var h00 = 1 - 3 * Math.pow(t, 2) + 2 * Math.pow(t, 3);
+                        var h01 = 3 * Math.pow(t, 2) - 2 * Math.pow(t, 3);
+                        return h00 * y1 + h01 * y2;
                     };
-                    var points = reorganize_points(coords_of_line);
-                    var get_control_points = function (x0, y0, x1, y1, x2, y2, t) {
-                        var d1 = Math.sqrt(Math.pow(x1 - x0, 2) + Math.pow(y1 - y0, 2));
-                        var d2 = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
-                        var fa = t * d1 / (d1 + d2);
-                        var fb = t * d2 / (d1 + d2);
-                        var p1x = x1 - fa * (x2 - x0);
-                        var p1y = y1 - fa * (y2 - y0);
-                        var p2x = x1 + fb * (x2 - x0);
-                        var p2y = y1 + fb * (y2 - y0);
-                        return [p1x, p1y, p2x, p2y];
-                    };
-                    var tension = 0.35;
-                    for (var i_1 = 0; i_1 < points.length - 1; i_1++) {
-                        var p1_1 = points[i_1][0];
-                        var p1_c = points[i_1][1];
-                        var p1_2 = points[i_1][2] || { x: options.chart.width, y: this.enable_height };
-                        var p2_1 = points[i_1 + 1][0];
-                        var p2_c = points[i_1 + 1][1];
-                        var p2_2 = points[i_1 + 1][2] || { x: options.chart.width, y: this.enable_height };
-                        var _a = get_control_points(p1_1.x, p1_1.y, p1_c.x, p1_c.y, p1_2.x, p1_2.y, tension), cp1_1x = _a[0], cp1_1y = _a[1], cp1_2x = _a[2], cp1_2y = _a[3];
-                        var _b = get_control_points(p2_1.x, p2_1.y, p2_c.x, p2_c.y, p2_2.x, p2_2.y, tension), cp2_1x = _b[0], cp2_1y = _b[1], cp2_2x = _b[2], cp2_2y = _b[3];
-                        if (p1_1.x === this.margin_borders) {
-                            cp1_2x = cp1_2x + 10;
+                    for (var x = 0; x < coords_of_line.length - 1; x += 1) {
+                        var p1 = coords_of_line[x];
+                        var p2 = coords_of_line[x + 1];
+                        var total_points_between = Math.abs(p1.x - p2.x);
+                        //ir acrecentando um valor minimo x ate agindir o x limite fazendo com que o preenchimento seja maior
+                        for (var z = 0; z < total_points_between; z++) {
+                            var current_x = p1.x + z;
+                            var current_y = hermit_interpolation(current_x, p1.x, p1.y, p2.x, p2.y);
+                            ctx.arc(current_x, current_y, 1, 0, Math.PI * 2);
                         }
-                        if (p1_c.y === p1_2.y && p1_c.y === this.enable_height) {
-                            cp2_1y = p1_c.y;
-                            cp1_2y = p1_c.y;
-                        }
-                        else {
-                            var limit_curve_on_base = function (y) {
-                                var limit = 20;
-                                if (y > (_this.enable_height - limit) && y < _this.enable_height)
-                                    return true;
-                                return false;
-                            };
-                            if (p1_2.y === this.enable_height && limit_curve_on_base(p1_c.y)) {
-                                cp1_2y = p1_2.y;
-                                cp2_1y = p1_2.y;
-                                cp2_1x = p1_2.x - ((70 / 100) * Math.abs(p1_c.x - p1_2.x));
-                            }
-                            if (p1_c.y === this.enable_height && limit_curve_on_base(p1_2.y)) {
-                                cp1_2y = p1_c.y;
-                                cp2_1y = p1_c.y + 5;
-                            }
-                            else {
-                                if (p1_2.y === this.enable_height)
-                                    cp2_1y = p1_2.y + 3;
-                                if (p1_c.y === this.enable_height)
-                                    cp1_2y = p1_c.y + 3;
-                            }
-                        }
-                        ctx.bezierCurveTo(cp1_2x, cp1_2y, cp2_1x, cp2_1y, p1_2.x, p1_2.y);
                     }
+                    // const reorganize_points = (coords: Array<{ x: number, y: number }>) => {
+                    //   let reorganized = [];
+                    //   for (let x = 0; x < coords.length - 1; x += 1) {
+                    //     reorganized.push([
+                    //       coords[x],
+                    //       coords[x + 1],
+                    //       coords[x + 2]
+                    //     ])
+                    //   }
+                    //   return reorganized;
+                    // }
+                    // const points = reorganize_points(coords_of_line);
+                    // const get_control_points = (x0: number, y0: number, x1: number, y1: number, x2: number, y2: number, t: number): number[] => {
+                    //   const d1 = Math.sqrt(Math.pow(x1 - x0, 2) + Math.pow(y1 - y0, 2));
+                    //   const d2 = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+                    //   const fa = t * d1 / (d1 + d2);
+                    //   const fb = t * d2 / (d1 + d2);
+                    //   const p1x = x1 - fa * (x2 - x0);
+                    //   const p1y = y1 - fa * (y2 - y0);
+                    //   const p2x = x1 + fb * (x2 - x0);
+                    //   const p2y = y1 + fb * (y2 - y0);
+                    //   return [p1x, p1y, p2x, p2y];
+                    // }
+                    // const tension = 0.35;
+                    // for (let i = 0; i < points.length - 1; i++) {
+                    //   const p1_1 = points[i][0];
+                    //   const p1_c = points[i][1];
+                    //   const p1_2 = points[i][2] || { x: options.chart.width, y: this.enable_height };
+                    //   const p2_1 = points[i + 1][0];
+                    //   const p2_c = points[i + 1][1];
+                    //   const p2_2 = points[i + 1][2] || { x: options.chart.width, y: this.enable_height };
+                    //   let [cp1_1x, cp1_1y, cp1_2x, cp1_2y] = get_control_points(p1_1.x, p1_1.y, p1_c.x, p1_c.y, p1_2.x, p1_2.y, tension);
+                    //   let [cp2_1x, cp2_1y, cp2_2x, cp2_2y] = get_control_points(p2_1.x, p2_1.y, p2_c.x, p2_c.y, p2_2.x, p2_2.y, tension);
+                    //   if (p1_1.x === this.margin_borders) {
+                    //     cp1_2x = cp1_2x + 10;
+                    //   }
+                    //   if (p1_c.y === p1_2.y && p1_c.y === this.enable_height) {
+                    //     cp2_1y = p1_c.y;
+                    //     cp1_2y = p1_c.y;
+                    //   } else {
+                    //     const limit_curve_on_base = (y: number) => {
+                    //       const limit = 20;
+                    //       if (y > (this.enable_height - limit) && y < this.enable_height) return true;
+                    //       return false;
+                    //     };
+                    //     if (p1_2.y === this.enable_height && limit_curve_on_base(p1_c.y)) {
+                    //       cp1_2y = p1_2.y;
+                    //       cp2_1y = p1_2.y;
+                    //       cp2_1x = p1_2.x - ((70 / 100) * Math.abs(p1_c.x - p1_2.x));
+                    //     }
+                    //     if (p1_c.y === this.enable_height && limit_curve_on_base(p1_2.y)) {
+                    //       cp1_2y = p1_c.y;
+                    //       cp2_1y = p1_c.y + 5;
+                    //     } else {
+                    //       if (p1_2.y === this.enable_height)
+                    //         cp2_1y = p1_2.y + 3;
+                    //       if (p1_c.y === this.enable_height)
+                    //         cp1_2y = p1_c.y + 3;
+                    //     }
+                    //   }
+                    //   ctx.bezierCurveTo(cp1_2x, cp1_2y, cp2_1x, cp2_1y, p1_2.x, p1_2.y);
+                    // }
                 }
                 if (!(options === null || options === void 0 ? void 0 : options.smooth)) {
                     for (var _i = 0, coords_of_line_1 = coords_of_line; _i < coords_of_line_1.length; _i++) {
@@ -231,8 +244,8 @@ var initialize_chart = function (options) {
                     ctx.lineTo(options.chart.width, this.enable_height);
                 }
                 ctx.stroke();
-                for (var _c = 0, coords_of_line_2 = coords_of_line; _c < coords_of_line_2.length; _c++) {
-                    var coord = coords_of_line_2[_c];
+                for (var _a = 0, coords_of_line_2 = coords_of_line; _a < coords_of_line_2.length; _a++) {
+                    var coord = coords_of_line_2[_a];
                     if (coord.x <= 0 || coord.x >= options.chart.width || coord.x === this.margin_borders)
                         continue;
                     ctx.fillStyle = '#fff';
