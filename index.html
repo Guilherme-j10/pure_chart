@@ -13,71 +13,65 @@
 
     body {
       width: 100%;
+      padding-top: 20px;
       background-color: #222a33;
-      height: 100vh;
+      height: calc(100vh - 20px);
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      align-items: center;
+    }
+
+    body .container {
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      justify-items: center;
+      margin-bottom: 20px;
+    }
+
+    body .container .props {
+      width: 100%;
       display: flex;
       justify-content: center;
       align-items: center;
     }
-
-    /* body #chart_canvas {
-      border: solid 1px #ffffff2d;
-    } */
   </style>
 </head>
 
 <body>
-  <canvas id="chart_canvas"></canvas>
+  <!-- <canvas id="chart_canvas"></canvas> -->
+  <div class="container">
+    <div class="props">
+      <canvas id="chart_canvas_1"></canvas>
+    </div>
+    <div class="props">
+      <canvas id="chart_canvas_2"></canvas>
+    </div>
+    <div class="props">
+      <canvas id="chart_canvas_3"></canvas>
+    </div>
+    <div class="props">
+      <canvas id="chart_canvas_4"></canvas>
+    </div>
+  </div>
+  <div class="container">
+    <div class="props">
+      <canvas id="chart_canvas_5"></canvas>
+    </div>
+    <div class="props">
+      <canvas id="chart_canvas_6"></canvas>
+    </div>
+    <div class="props">
+      <canvas id="chart_canvas_7"></canvas>
+    </div>
+    <div class="props">
+      <canvas id="chart_canvas_8"></canvas>
+    </div>
+  </div>
   <script src="chart.js"></script>
-  <script>
-
-    const size = 12;
-
-    var options = {
-      canvas: 'chart_canvas',
-      colors: ['#fff', '#62a5d9', '#dbd753'],
-      smooth: true,
-      disable_sparklines: false,
-      label_tip: 'Dia: ',
-      series: [
-        // {
-        //   data_label: 'Saudação',
-        //   data_type: 'column',
-        //   data: Array.from({ length: size }).map(() => Math.floor(Math.random() * 50))
-        // },
-        // {
-        //   data_label: 'Propaganda',
-        //   data_type: 'column',
-        //   data:Array.from({ length: size }).map(() => Math.floor(Math.random() * 50))
-        // },
-        // {
-        //   data_label: 'Notificação',
-        //   data_type: 'column',
-        //   data: Array.from({ length: size }).map(() => Math.floor(Math.random() * 50))
-        // },
-        // {
-        //   data_label: 'Encaminhamento',
-        //   data_type: 'line',
-        //   color: '#caf50a',
-        //   data: Array.from({ length: size }).map(() => Math.floor(Math.random() * 50))
-        // },
-        {
-          data_label: 'Conversão',
-          data_type: 'line',
-          color: '#be45ff',
-          data: [0, 2, 1, 0, 3, 0, 10, 5, 5, 0],
-          //data: Array.from({ length: size }).map(() => Math.floor(Math.random() * 120))
-        }
-      ],
-      chart: {
-        width: 810,
-        height: 520
-      }
-    };
-
-    initialize_chart(options);
-
-  </script>
+  <script src="test.js"></script>
 </body>
 
 </html>

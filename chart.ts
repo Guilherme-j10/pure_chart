@@ -3,13 +3,19 @@ type OptionsType = {
   label_tip?: string,
   series: Array<{
     data_label: string,
-    color?: string,
+    color: string,
     data_type: string,
     data: number[]
   }>,
-  colors: string[],
+  enable_data_dots?: boolean,
+  stroke_line_settings?: {
+    width: number,
+    fill?: boolean,
+    fill_color?: string
+  },
   disable_sparklines?: boolean,
   smooth?: boolean,
+  hermit_enable?: boolean
   labels?: string[],
   chart: {
     width: number,
@@ -88,32 +94,62 @@ const initialize_chart = (options: OptionsType): ChartType => {
 
   }
 
+  const default_stroke_width = (options?.stroke_line_settings?.width || 3);
+
   const chart = {
     line_base_height: options.chart.height - 25,
     size_text: 11,
     size_text_tip: 13,
     padding_top: 22,
     margin_borders: 10,
-    enable_height: 0,
+    default_stroke_style: {
+      width: default_stroke_width,
+    },
+    enable_height: (options?.disable_sparklines || false) ?
+      options.chart.height - default_stroke_width : 0,
     min_width: options?.disable_sparklines ? 0 : 30,
     current_labels: [] as string[],
     chart_column_pos: [] as ChartColumnPos[],
+    chart_data_preset_validation() {
+
+      let _success = true;
+      const get_all_colors = options.series.map(data => data.color);
+
+      for (const color of get_all_colors) {
+
+        const removed_prefix = color.split('#')[1];
+
+        if (removed_prefix.length === 6) continue;
+
+        _success = false;
+
+      }
+
+      //verifica a estrutura de dados passando para poder formar o grafico
+
+      return _success
+
+    },
     draw_element(load: DrawElementTypes) {
 
+      ctx.beginPath();
       ctx.fillStyle = load.color;
 
-      //ctx.shadowColor = '#1111119e';
-      //ctx.shadowBlur = 5;
-      //ctx.shadowOffsetX = 0;
-      //ctx.shadowOffsetY = 0;
+      ctx.shadowColor = '#1111119e';
+      ctx.shadowBlur = 5;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 0;
 
-      if (!Object.keys(load?.text || {}).length && Object.keys(load?.coords || {}).length)
+      if (!Object.keys(load?.text || {}).length && Object.keys(load?.coords || {}).length) {
+
         ctx.fillRect(
           load.coords?.x as number,
           load.coords?.y as number,
           load.coords?.w as number,
           load.coords?.h as number
         );
+
+      }
 
       if (Object.keys(load?.text || {}).length) {
 
@@ -126,6 +162,8 @@ const initialize_chart = (options: OptionsType): ChartType => {
         );
 
       }
+
+      ctx.closePath();
 
     },
     draw_base_chart() {
@@ -187,11 +225,22 @@ const initialize_chart = (options: OptionsType): ChartType => {
       return max_values.reduce((acc, val) => acc > val ? acc : val, 0);
 
     },
+    get_rgb_color(hex: string) {
+
+      let result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+
+      return result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+      } : null;
+
+    },
     draw_columns() {
 
+      const enable_stroke_bars = true;
       const get_columns = options.series.filter(data => data.data_type === 'column');
       const calc_spikes_pos = (options.chart.width - (this.min_width + this.margin_borders)) / options.series[0].data.length;
-      //const diff_from_base = Math.abs(options.chart.height - this.line_base_height);
 
       const padding_space = interpolation(options.series.length, [0, 50], [5, 30]);
       const complete_column_width = calc_spikes_pos - padding_space;
@@ -199,9 +248,7 @@ const initialize_chart = (options: OptionsType): ChartType => {
 
       const get_lines = options.series.filter(data => data.data_type === 'line');
 
-      //const enabled_max_height = options.chart.height - diff_from_base - this.margin_borders;
-      //this.enable_height = enabled_max_height;
-      const max_enabled_value = this.calculate_max_value_enabled();
+      //const max_enabled_value = this.calculate_max_value_enabled();
       const max_height = this.calculate_max_val();//max_enabled_value.get_max_value;
 
       for (let x = 0; x < options.series[0].data.length; x++) {
@@ -220,15 +267,46 @@ const initialize_chart = (options: OptionsType): ChartType => {
 
           const chart_height_column = interpolation(options.series[z].data[x], [0, max_height], [2, this.enable_height - (padding_space / 2)]);
 
-          this.draw_element({
-            color: options.colors[z],
-            coords: {
-              h: chart_height_column,
-              w: space_by_each_column,
-              x: start_point,
-              y: Math.abs(this.enable_height - chart_height_column)
-            }
-          });
+          if (enable_stroke_bars) {
+
+            const h = chart_height_column;
+            const w = space_by_each_column;
+            const x = start_point;
+            const y = Math.abs(this.enable_height - chart_height_column);
+
+            ctx.beginPath();
+
+            const rgb = this.get_rgb_color(options.series[z].color);
+            ctx.fillStyle = `rgb(${rgb?.r}, ${rgb?.g}, ${rgb?.b}, .2)`;
+            ctx.strokeStyle = options.series[z].color;
+            ctx.lineWidth = 2;
+
+            ctx.moveTo(x, y);
+
+            ctx.lineTo((x + w), y);
+            ctx.lineTo((x + w), (y + h));
+            ctx.lineTo(x, (y + h));
+            ctx.lineTo(x, y);
+
+            ctx.stroke();
+            ctx.fill();
+            ctx.closePath();
+
+          }
+
+          if (!enable_stroke_bars) {
+
+            this.draw_element({
+              color: options.series[z].color,
+              coords: {
+                h: chart_height_column,
+                w: space_by_each_column,
+                x: start_point,
+                y: Math.abs(this.enable_height - chart_height_column)
+              }
+            });
+
+          }
 
           start_point = start_point + space_by_each_column;
 
@@ -253,10 +331,12 @@ const initialize_chart = (options: OptionsType): ChartType => {
         }
 
         ctx.strokeStyle = get_lines[i].color as string;
-        ctx.lineWidth = 3;
+        ctx.lineWidth = this.default_stroke_style.width;
+
+        const is_spline_cubic = !options?.hermit_enable ? true : false;
 
         ctx.beginPath();
-        //ctx.moveTo((this.min_width + this.margin_borders), this.enable_height);
+        ctx.moveTo((this.min_width + this.margin_borders), this.enable_height);
 
         if (options?.smooth) {
 
@@ -275,129 +355,131 @@ const initialize_chart = (options: OptionsType): ChartType => {
 
           }
 
-          for (let x = 0; x < coords_of_line.length - 1; x += 1) {
+          if (!is_spline_cubic) {
 
-            const p1 = coords_of_line[x];
-            const p2 = coords_of_line[x + 1];
+            for (let x = 0; x < coords_of_line.length - 1; x += 1) {
 
-            const total_points_between = Math.abs(p1.x - p2.x);
+              const p1 = coords_of_line[x];
+              const p2 = coords_of_line[x + 1];
 
-            //ir acrecentando um valor minimo x ate agindir o x limite fazendo com que o preenchimento seja maior
+              let current_x = p1.x;
+              let steps = 0.1;
 
-            for (let z = 0; z < total_points_between; z++) {
+              while (current_x <= p2.x) {
 
-              const current_x = p1.x + z;
-              const current_y = hermit_interpolation(current_x, p1.x, p1.y, p2.x, p2.y);
+                current_x += steps;
 
-              ctx.arc(current_x, current_y, 1, 0, Math.PI * 2);
+                const current_y = hermit_interpolation(current_x, p1.x, p1.y, p2.x, p2.y);
+
+                ctx.lineTo(current_x, current_y);
+
+              }
 
             }
 
           }
 
-          // const reorganize_points = (coords: Array<{ x: number, y: number }>) => {
+          if (is_spline_cubic) {
 
-          //   let reorganized = [];
+            const reorganize_points = (coords: Array<{ x: number, y: number }>) => {
 
-          //   for (let x = 0; x < coords.length - 1; x += 1) {
+              let reorganized = [];
 
-          //     reorganized.push([
-          //       coords[x],
-          //       coords[x + 1],
-          //       coords[x + 2]
-          //     ])
+              for (let x = 0; x < coords.length - 1; x += 1) {
 
-          //   }
+                reorganized.push([
+                  coords[x],
+                  coords[x + 1],
+                  coords[x + 2]
+                ])
 
-          //   return reorganized;
+              }
 
-          // }
+              return reorganized;
 
-          // const points = reorganize_points(coords_of_line);
+            }
 
-          // const get_control_points = (x0: number, y0: number, x1: number, y1: number, x2: number, y2: number, t: number): number[] => {
+            const points = reorganize_points(coords_of_line);
 
-          //   const d1 = Math.sqrt(Math.pow(x1 - x0, 2) + Math.pow(y1 - y0, 2));
-          //   const d2 = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+            const get_control_points = (x0: number, y0: number, x1: number, y1: number, x2: number, y2: number, t: number): number[] => {
 
-          //   const fa = t * d1 / (d1 + d2);
-          //   const fb = t * d2 / (d1 + d2);
+              const d1 = Math.sqrt(Math.pow(x1 - x0, 2) + Math.pow(y1 - y0, 2));
+              const d2 = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
 
-          //   const p1x = x1 - fa * (x2 - x0);
-          //   const p1y = y1 - fa * (y2 - y0);
-          //   const p2x = x1 + fb * (x2 - x0);
-          //   const p2y = y1 + fb * (y2 - y0);
+              const fa = t * d1 / (d1 + d2);
+              const fb = t * d2 / (d1 + d2);
 
-          //   return [p1x, p1y, p2x, p2y];
+              const p1x = x1 - fa * (x2 - x0);
+              const p1y = y1 - fa * (y2 - y0);
+              const p2x = x1 + fb * (x2 - x0);
+              const p2y = y1 + fb * (y2 - y0);
 
-          // }
+              return [p1x, p1y, p2x, p2y];
 
-          // const tension = 0.35;
+            }
 
-          // for (let i = 0; i < points.length - 1; i++) {
+            const tension = 0.35;
 
-          //   const p1_1 = points[i][0];
-          //   const p1_c = points[i][1];
-          //   const p1_2 = points[i][2] || { x: options.chart.width, y: this.enable_height };
+            for (let i = 0; i < points.length - 1; i++) {
 
-          //   const p2_1 = points[i + 1][0];
-          //   const p2_c = points[i + 1][1];
-          //   const p2_2 = points[i + 1][2] || { x: options.chart.width, y: this.enable_height };
+              const p1_1 = points[i][0];
+              const p1_c = points[i][1];
+              const p1_2 = points[i][2] || { x: options.chart.width, y: this.enable_height };
 
-          //   let [cp1_1x, cp1_1y, cp1_2x, cp1_2y] = get_control_points(p1_1.x, p1_1.y, p1_c.x, p1_c.y, p1_2.x, p1_2.y, tension);
-          //   let [cp2_1x, cp2_1y, cp2_2x, cp2_2y] = get_control_points(p2_1.x, p2_1.y, p2_c.x, p2_c.y, p2_2.x, p2_2.y, tension);
+              const p2_1 = points[i + 1][0];
+              const p2_c = points[i + 1][1];
+              const p2_2 = points[i + 1][2] || { x: options.chart.width, y: this.enable_height };
 
-          //   if (p1_1.x === this.margin_borders) {
+              let [cp1_1x, cp1_1y, cp1_2x, cp1_2y] = get_control_points(p1_1.x, p1_1.y, p1_c.x, p1_c.y, p1_2.x, p1_2.y, tension);
+              let [cp2_1x, cp2_1y, cp2_2x, cp2_2y] = get_control_points(p2_1.x, p2_1.y, p2_c.x, p2_c.y, p2_2.x, p2_2.y, tension);
 
-          //     cp1_2x = cp1_2x + 10;
+              if (p1_c.y === p1_2.y && p1_c.y === this.enable_height) {
 
-          //   }
+                cp2_1y = p1_c.y;
+                cp1_2y = p1_c.y;
 
-          //   if (p1_c.y === p1_2.y && p1_c.y === this.enable_height) {
+              } else {
 
-          //     cp2_1y = p1_c.y;
-          //     cp1_2y = p1_c.y;
+                const limit_curve_on_base = (y: number) => {
 
-          //   } else {
+                  const limit = 20;
 
-          //     const limit_curve_on_base = (y: number) => {
+                  if (y > (this.enable_height - limit) && y < this.enable_height) return true;
 
-          //       const limit = 20;
+                  return false;
 
-          //       if (y > (this.enable_height - limit) && y < this.enable_height) return true;
+                };
 
-          //       return false;
+                if (p1_2.y === this.enable_height && limit_curve_on_base(p1_c.y)) {
 
-          //     };
+                  cp1_2y = p1_2.y;
+                  cp2_1y = p1_2.y;
+                  cp2_1x = p1_2.x - ((70 / 100) * Math.abs(p1_c.x - p1_2.x));
 
-          //     if (p1_2.y === this.enable_height && limit_curve_on_base(p1_c.y)) {
+                }
 
-          //       cp1_2y = p1_2.y;
-          //       cp2_1y = p1_2.y;
-          //       cp2_1x = p1_2.x - ((70 / 100) * Math.abs(p1_c.x - p1_2.x));
+                if (p1_c.y === this.enable_height && limit_curve_on_base(p1_2.y)) {
 
-          //     }
+                  cp1_2y = p1_c.y;
+                  cp2_1y = p1_c.y + 5;
 
-          //     if (p1_c.y === this.enable_height && limit_curve_on_base(p1_2.y)) {
+                } else {
 
-          //       cp1_2y = p1_c.y;
-          //       cp2_1y = p1_c.y + 5;
+                  if (p1_2.y === this.enable_height)
+                    cp2_1y = p1_2.y + 3;
 
-          //     } else {
+                  if (p1_c.y === this.enable_height)
+                    cp1_2y = p1_c.y + 3;
 
-          //       if (p1_2.y === this.enable_height)
-          //         cp2_1y = p1_2.y + 3;
+                }
 
-          //       if (p1_c.y === this.enable_height)
-          //         cp1_2y = p1_c.y + 3;
+              }
 
-          //     }
+              ctx.bezierCurveTo(cp1_2x, cp1_2y, cp2_1x, cp2_1y, p1_2.x, p1_2.y);
 
-          //   }
+            }
 
-          //   ctx.bezierCurveTo(cp1_2x, cp1_2y, cp2_1x, cp2_1y, p1_2.x, p1_2.y);
-
-          // }
+          }
 
         }
 
@@ -415,15 +497,37 @@ const initialize_chart = (options: OptionsType): ChartType => {
 
         ctx.stroke();
 
-        for (const coord of coords_of_line) {
+        if (options?.stroke_line_settings?.fill) {
 
-          if (coord.x <= 0 || coord.x >= options.chart.width || coord.x === this.margin_borders) continue;
+          if (options?.stroke_line_settings?.fill_color)
+            ctx.fillStyle = options?.stroke_line_settings?.fill_color;
 
-          ctx.fillStyle = '#fff';
-          ctx.beginPath();
-          ctx.arc(coord.x, coord.y, 3, 0, Math.PI * 2);
           ctx.fill();
-          ctx.closePath();
+
+        }
+
+        ctx.closePath();
+
+        const dots_enable = typeof options.enable_data_dots === 'undefined' ? true : options.enable_data_dots;
+
+        if (dots_enable) {
+
+          for (const coord of coords_of_line) {
+
+            if (
+              coord.x <= 0 ||
+              coord.x >= options.chart.width ||
+              coord.x === this.margin_borders ||
+              coord.x === (this.min_width + this.margin_borders)
+            ) continue;
+
+            ctx.fillStyle = '#fff';
+            ctx.beginPath();
+            ctx.arc(coord.x, coord.y, 3, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.closePath();
+
+          }
 
         }
 
@@ -449,7 +553,7 @@ const initialize_chart = (options: OptionsType): ChartType => {
     calculate_max_value_enabled() {
 
       const min_space = 25;
-      let get_max_value = this.calculate_max_val();
+      let get_max_value = (this.calculate_max_val()) || 10;
       const loops = (this.enable_height) / min_space;
       let increaser = get_max_value / loops;
       let vertical_data = [0];
@@ -616,7 +720,7 @@ const initialize_chart = (options: OptionsType): ChartType => {
               }
             });
 
-            ctx.fillStyle = options.series[i]?.color || options.colors[i];
+            ctx.fillStyle = options.series[i]?.color;
             ctx.beginPath();
             ctx.arc(pos_x_base + padding, pos_y_labels - 15, 5, 0, Math.PI * 2);
             ctx.fill();
@@ -635,12 +739,19 @@ const initialize_chart = (options: OptionsType): ChartType => {
 
     ctx.clearRect(0, 0, options.chart.width, options.chart.height);
 
-    chart.draw_side_left_height_data();
-    chart.draw_activate_hover_columns();
-    chart.draw_base_chart();
-    chart.draw_spikes();
+    if (!options?.disable_sparklines) {
+
+      chart.draw_side_left_height_data();
+      chart.draw_activate_hover_columns();
+      chart.draw_base_chart();
+      chart.draw_spikes();
+
+    }
+
     chart.draw_columns();
-    chart.draw_tooltip();
+
+    if (!options?.disable_sparklines)
+      chart.draw_tooltip();
 
   }
 
@@ -685,10 +796,12 @@ const initialize_chart = (options: OptionsType): ChartType => {
   }
 
   const data_is_ok = check_data_integrity();
-
+  const chart_data_preset_is_ok = chart.chart_data_preset_validation();
+  
+  if (!chart_data_preset_is_ok) console.error('Check your config');
   if (!data_is_ok) console.error('Check your provided data.')
 
-  if (data_is_ok) {
+  if (data_is_ok && chart_data_preset_is_ok) {
 
     draw_everything();
 
