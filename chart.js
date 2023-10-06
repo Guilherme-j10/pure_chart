@@ -60,7 +60,6 @@ var initialize_chart = function (options) {
                     continue;
                 _success = false;
             }
-            //verifica a estrutura de dados passando para poder formar o grafico
             return _success;
         },
         draw_element: function (load) {
@@ -136,18 +135,18 @@ var initialize_chart = function (options) {
         },
         draw_columns: function () {
             var _this = this;
-            var _a, _b, _c;
-            var enable_stroke_bars = true;
+            var _a, _b, _c, _d;
+            var vertical_boarder = (options === null || options === void 0 ? void 0 : options.hide_vertical_data_set) ? 0 : this.margin_borders;
+            var enable_stroke_bars = (_a = options === null || options === void 0 ? void 0 : options.stroke_line_settings) === null || _a === void 0 ? void 0 : _a.opacity_bar_enabled;
             var get_columns = options.series.filter(function (data) { return data.data_type === 'column'; });
-            var calc_spikes_pos = (options.chart.width - (this.min_width + this.margin_borders)) / options.series[0].data.length;
+            var calc_spikes_pos = (options.chart.width - (this.min_width + vertical_boarder)) / options.series[0].data.length;
             var padding_space = interpolation(options.series.length, [0, 50], [5, 30]);
             var complete_column_width = calc_spikes_pos - padding_space;
             var space_by_each_column = Math.abs((complete_column_width + (enable_stroke_bars ? this.default_stroke_style.width : 0)) / get_columns.length);
             var get_lines = options.series.filter(function (data) { return data.data_type === 'line'; });
-            //const max_enabled_value = this.calculate_max_value_enabled();
-            var max_height = this.calculate_max_val(); //max_enabled_value.get_max_value;
+            var max_height = this.calculate_max_val();
             for (var x = 0; x < options.series[0].data.length; x++) {
-                var initial_point = (calc_spikes_pos * x) + this.min_width + this.margin_borders;
+                var initial_point = (calc_spikes_pos * x) + this.min_width + vertical_boarder;
                 var initial_point_more_padding = initial_point + (padding_space / 2);
                 var start_point = initial_point_more_padding;
                 this.chart_column_pos.push({
@@ -197,16 +196,16 @@ var initialize_chart = function (options) {
                     var calc_y = Math.abs(chart_height_column - this.enable_height);
                     var pinter_x = calc_spikes_pos * y;
                     var middle_pointer_x = pinter_x + (calc_spikes_pos / 2);
-                    coords_of_line.push({ x: middle_pointer_x + (this.min_width + this.margin_borders), y: calc_y });
+                    coords_of_line.push({ x: middle_pointer_x + (this.min_width + vertical_boarder), y: calc_y });
                 }
                 ctx.strokeStyle = get_lines[i].color;
                 ctx.lineWidth = this.default_stroke_style.width;
                 var is_spline_cubic = !(options === null || options === void 0 ? void 0 : options.hermit_enable) ? true : false;
                 ctx.beginPath();
-                ctx.moveTo((this.min_width + this.margin_borders), this.enable_height);
+                ctx.moveTo((this.min_width + vertical_boarder), this.enable_height);
                 if (options === null || options === void 0 ? void 0 : options.smooth) {
-                    coords_of_line.unshift({ x: (this.min_width + this.margin_borders), y: this.enable_height });
-                    coords_of_line.unshift({ x: (this.min_width + this.margin_borders), y: this.enable_height });
+                    coords_of_line.unshift({ x: (this.min_width + vertical_boarder), y: this.enable_height });
+                    coords_of_line.unshift({ x: (this.min_width + vertical_boarder), y: this.enable_height });
                     coords_of_line.push({ x: options.chart.width, y: this.enable_height });
                     var hermit_interpolation = function (x, x1, y1, x2, y2) {
                         var t = (x - x1) / (x2 - x1);
@@ -259,8 +258,8 @@ var initialize_chart = function (options) {
                             var p2_1 = points[i_1 + 1][0];
                             var p2_c = points[i_1 + 1][1];
                             var p2_2 = points[i_1 + 1][2] || { x: options.chart.width, y: this.enable_height };
-                            var _d = get_control_points(p1_1.x, p1_1.y, p1_c.x, p1_c.y, p1_2.x, p1_2.y, tension), cp1_1x = _d[0], cp1_1y = _d[1], cp1_2x = _d[2], cp1_2y = _d[3];
-                            var _e = get_control_points(p2_1.x, p2_1.y, p2_c.x, p2_c.y, p2_2.x, p2_2.y, tension), cp2_1x = _e[0], cp2_1y = _e[1], cp2_2x = _e[2], cp2_2y = _e[3];
+                            var _e = get_control_points(p1_1.x, p1_1.y, p1_c.x, p1_c.y, p1_2.x, p1_2.y, tension), cp1_1x = _e[0], cp1_1y = _e[1], cp1_2x = _e[2], cp1_2y = _e[3];
+                            var _f = get_control_points(p2_1.x, p2_1.y, p2_c.x, p2_c.y, p2_2.x, p2_2.y, tension), cp2_1x = _f[0], cp2_1y = _f[1], cp2_2x = _f[2], cp2_2y = _f[3];
                             if (p1_c.y === p1_2.y && p1_c.y === this.enable_height) {
                                 cp2_1y = p1_c.y;
                                 cp1_2y = p1_c.y;
@@ -300,20 +299,20 @@ var initialize_chart = function (options) {
                     ctx.lineTo(options.chart.width, this.enable_height);
                 }
                 ctx.stroke();
-                if ((_a = options === null || options === void 0 ? void 0 : options.stroke_line_settings) === null || _a === void 0 ? void 0 : _a.fill) {
-                    if ((_b = options === null || options === void 0 ? void 0 : options.stroke_line_settings) === null || _b === void 0 ? void 0 : _b.fill_color)
-                        ctx.fillStyle = (_c = options === null || options === void 0 ? void 0 : options.stroke_line_settings) === null || _c === void 0 ? void 0 : _c.fill_color;
+                if ((_b = options === null || options === void 0 ? void 0 : options.stroke_line_settings) === null || _b === void 0 ? void 0 : _b.fill) {
+                    if ((_c = options === null || options === void 0 ? void 0 : options.stroke_line_settings) === null || _c === void 0 ? void 0 : _c.fill_color)
+                        ctx.fillStyle = (_d = options === null || options === void 0 ? void 0 : options.stroke_line_settings) === null || _d === void 0 ? void 0 : _d.fill_color;
                     ctx.fill();
                 }
                 ctx.closePath();
                 var dots_enable = typeof options.enable_data_dots === 'undefined' ? true : options.enable_data_dots;
                 if (dots_enable) {
-                    for (var _f = 0, coords_of_line_2 = coords_of_line; _f < coords_of_line_2.length; _f++) {
-                        var coord = coords_of_line_2[_f];
+                    for (var _g = 0, coords_of_line_2 = coords_of_line; _g < coords_of_line_2.length; _g++) {
+                        var coord = coords_of_line_2[_g];
                         if (coord.x <= 0 ||
                             coord.x >= options.chart.width ||
-                            coord.x === this.margin_borders ||
-                            coord.x === (this.min_width + this.margin_borders))
+                            coord.x === vertical_boarder ||
+                            coord.x === (this.min_width + vertical_boarder))
                             continue;
                         ctx.fillStyle = '#fff';
                         ctx.beginPath();
@@ -351,6 +350,8 @@ var initialize_chart = function (options) {
             var dashed_enabled = true;
             var diff_from_base = Math.abs(options.chart.height - this.line_base_height);
             this.enable_height = options.chart.height - diff_from_base - this.margin_borders;
+            if ((options === null || options === void 0 ? void 0 : options.hide_vertical_data_set) === true)
+                return;
             var _a = this.calculate_max_value_enabled(), get_max_value = _a.get_max_value, vertical_data = _a.vertical_data;
             this.min_width = ("".concat(parseInt(get_max_value)).length * this.size_text) + (this.size_text / 2);
             this.draw_element({

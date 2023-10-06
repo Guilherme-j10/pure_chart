@@ -7,9 +7,11 @@ type OptionsType = {
     data_type: string,
     data: number[]
   }>,
+  hide_vertical_data_set?: boolean,
   enable_data_dots?: boolean,
   stroke_line_settings?: {
     width: number,
+    opacity_bar_enabled?: boolean
     fill?: boolean,
     fill_color?: string
   },
@@ -125,8 +127,6 @@ const initialize_chart = (options: OptionsType): ChartType => {
 
       }
 
-      //verifica a estrutura de dados passando para poder formar o grafico
-
       return _success
 
     },
@@ -238,22 +238,19 @@ const initialize_chart = (options: OptionsType): ChartType => {
     },
     draw_columns() {
 
-      const enable_stroke_bars = true;
+      const vertical_boarder = options?.hide_vertical_data_set ? 0 : this.margin_borders;
+      const enable_stroke_bars = options?.stroke_line_settings?.opacity_bar_enabled;
       const get_columns = options.series.filter(data => data.data_type === 'column');
-      const calc_spikes_pos = (options.chart.width - (this.min_width + this.margin_borders)) / options.series[0].data.length;
-
+      const calc_spikes_pos = (options.chart.width - (this.min_width + vertical_boarder)) / options.series[0].data.length;
       const padding_space = interpolation(options.series.length, [0, 50], [5, 30]);
       const complete_column_width = calc_spikes_pos - padding_space;
       const space_by_each_column = Math.abs((complete_column_width + (enable_stroke_bars ? this.default_stroke_style.width : 0)) / get_columns.length);
-
       const get_lines = options.series.filter(data => data.data_type === 'line');
-
-      //const max_enabled_value = this.calculate_max_value_enabled();
-      const max_height = this.calculate_max_val();//max_enabled_value.get_max_value;
+      const max_height = this.calculate_max_val();
 
       for (let x = 0; x < options.series[0].data.length; x++) {
 
-        const initial_point = (calc_spikes_pos * x) + this.min_width + this.margin_borders;
+        const initial_point = (calc_spikes_pos * x) + this.min_width + vertical_boarder;
         const initial_point_more_padding = initial_point + (padding_space / 2);
         let start_point = initial_point_more_padding;
 
@@ -326,7 +323,7 @@ const initialize_chart = (options: OptionsType): ChartType => {
           const pinter_x = calc_spikes_pos * y;
           const middle_pointer_x = pinter_x + (calc_spikes_pos / 2);
 
-          coords_of_line.push({ x: middle_pointer_x + (this.min_width + this.margin_borders), y: calc_y });
+          coords_of_line.push({ x: middle_pointer_x + (this.min_width + vertical_boarder), y: calc_y });
 
         }
 
@@ -336,12 +333,12 @@ const initialize_chart = (options: OptionsType): ChartType => {
         const is_spline_cubic = !options?.hermit_enable ? true : false;
 
         ctx.beginPath();
-        ctx.moveTo((this.min_width + this.margin_borders), this.enable_height);
+        ctx.moveTo((this.min_width + vertical_boarder), this.enable_height);
 
         if (options?.smooth) {
 
-          coords_of_line.unshift({ x: (this.min_width + this.margin_borders), y: this.enable_height });
-          coords_of_line.unshift({ x: (this.min_width + this.margin_borders), y: this.enable_height });
+          coords_of_line.unshift({ x: (this.min_width + vertical_boarder), y: this.enable_height });
+          coords_of_line.unshift({ x: (this.min_width + vertical_boarder), y: this.enable_height });
           coords_of_line.push({ x: options.chart.width, y: this.enable_height });
 
           const hermit_interpolation = (x: number, x1: number, y1: number, x2: number, y2: number): number => {
@@ -517,8 +514,8 @@ const initialize_chart = (options: OptionsType): ChartType => {
             if (
               coord.x <= 0 ||
               coord.x >= options.chart.width ||
-              coord.x === this.margin_borders ||
-              coord.x === (this.min_width + this.margin_borders)
+              coord.x === vertical_boarder ||
+              coord.x === (this.min_width + vertical_boarder)
             ) continue;
 
             ctx.fillStyle = '#fff';
@@ -572,6 +569,8 @@ const initialize_chart = (options: OptionsType): ChartType => {
       const dashed_enabled = true;
       const diff_from_base = Math.abs(options.chart.height - this.line_base_height);
       this.enable_height = options.chart.height - diff_from_base - this.margin_borders;
+
+      if (options?.hide_vertical_data_set === true) return; 
 
       const { get_max_value, vertical_data } = this.calculate_max_value_enabled();
 

@@ -40,8 +40,8 @@ const initialize = (props) => {
       }
     ],
     chart: {
-      width: 380,
-      height: 250
+      width: 580,
+      height: 350
     },
     ...props,
   };
@@ -52,7 +52,7 @@ const initialize = (props) => {
 
 initialize();
 initialize({ canvas: 'chart_canvas_2', smooth: false });
-initialize({ canvas: 'chart_canvas_3', hermit_enable: true });
+initialize({ canvas: 'chart_canvas_3', hermit_enable: true, hide_vertical_data_set: true });
 initialize({ canvas: 'chart_canvas_4', disable_sparklines: true, enable_data_dots: false });
 
 initialize({ 
@@ -81,19 +81,26 @@ initialize({
   stroke_line_settings: {
     width: 2,
     fill: true,
+    opacity_bar_enabled: true,
     fill_color: '#33ff0018'
   },
   series: [
     {
       data_label: 'Propaganda',
       data_type: 'column',
-      color: '#62a5d9',
+      color: '#fbe606',
+      data: Array.from({ length: 15 }).map(() => Math.floor(Math.random() * 50))
+    },
+    {
+      data_label: 'Propaganda',
+      data_type: 'column',
+      color: '#ffffff',
       data: Array.from({ length: 15 }).map(() => Math.floor(Math.random() * 50))
     },
     {
       data_label: 'Notificação',
       data_type: 'column',
-      color: '#dbd753',
+      color: '#2be812',
       data: Array.from({ length: 15 }).map(() => Math.floor(Math.random() * 50))
     }
   ],
