@@ -40,8 +40,8 @@ const initialize = (props) => {
       }
     ],
     chart: {
-      width: 300,
-      height: 200
+      width: 380,
+      height: 250
     },
     ...props,
   };

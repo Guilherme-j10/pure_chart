@@ -142,7 +142,7 @@ var initialize_chart = function (options) {
             var calc_spikes_pos = (options.chart.width - (this.min_width + this.margin_borders)) / options.series[0].data.length;
             var padding_space = interpolation(options.series.length, [0, 50], [5, 30]);
             var complete_column_width = calc_spikes_pos - padding_space;
-            var space_by_each_column = Math.abs(complete_column_width / get_columns.length);
+            var space_by_each_column = Math.abs((complete_column_width + (enable_stroke_bars ? this.default_stroke_style.width : 0)) / get_columns.length);
             var get_lines = options.series.filter(function (data) { return data.data_type === 'line'; });
             //const max_enabled_value = this.calculate_max_value_enabled();
             var max_height = this.calculate_max_val(); //max_enabled_value.get_max_value;
@@ -159,19 +159,19 @@ var initialize_chart = function (options) {
                     var chart_height_column = interpolation(options.series[z].data[x], [0, max_height], [2, this.enable_height - (padding_space / 2)]);
                     if (enable_stroke_bars) {
                         var h = chart_height_column;
-                        var w = space_by_each_column;
+                        var w = space_by_each_column - this.default_stroke_style.width;
                         var x_1 = start_point;
                         var y = Math.abs(this.enable_height - chart_height_column);
                         ctx.beginPath();
                         var rgb = this.get_rgb_color(options.series[z].color);
                         ctx.fillStyle = "rgb(".concat(rgb === null || rgb === void 0 ? void 0 : rgb.r, ", ").concat(rgb === null || rgb === void 0 ? void 0 : rgb.g, ", ").concat(rgb === null || rgb === void 0 ? void 0 : rgb.b, ", .2)");
                         ctx.strokeStyle = options.series[z].color;
-                        ctx.lineWidth = 2;
+                        ctx.lineWidth = this.default_stroke_style.width;
                         ctx.moveTo(x_1, y);
                         ctx.lineTo((x_1 + w), y);
                         ctx.lineTo((x_1 + w), (y + h));
                         ctx.lineTo(x_1, (y + h));
-                        ctx.lineTo(x_1, y);
+                        ctx.lineTo(x_1, y - 1);
                         ctx.stroke();
                         ctx.fill();
                         ctx.closePath();

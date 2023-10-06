@@ -244,7 +244,7 @@ const initialize_chart = (options: OptionsType): ChartType => {
 
       const padding_space = interpolation(options.series.length, [0, 50], [5, 30]);
       const complete_column_width = calc_spikes_pos - padding_space;
-      const space_by_each_column = Math.abs(complete_column_width / get_columns.length);
+      const space_by_each_column = Math.abs((complete_column_width + (enable_stroke_bars ? this.default_stroke_style.width : 0)) / get_columns.length);
 
       const get_lines = options.series.filter(data => data.data_type === 'line');
 
@@ -270,7 +270,7 @@ const initialize_chart = (options: OptionsType): ChartType => {
           if (enable_stroke_bars) {
 
             const h = chart_height_column;
-            const w = space_by_each_column;
+            const w = space_by_each_column - this.default_stroke_style.width;
             const x = start_point;
             const y = Math.abs(this.enable_height - chart_height_column);
 
@@ -279,14 +279,14 @@ const initialize_chart = (options: OptionsType): ChartType => {
             const rgb = this.get_rgb_color(options.series[z].color);
             ctx.fillStyle = `rgb(${rgb?.r}, ${rgb?.g}, ${rgb?.b}, .2)`;
             ctx.strokeStyle = options.series[z].color;
-            ctx.lineWidth = 2;
+            ctx.lineWidth = this.default_stroke_style.width;
 
             ctx.moveTo(x, y);
 
             ctx.lineTo((x + w), y);
             ctx.lineTo((x + w), (y + h));
             ctx.lineTo(x, (y + h));
-            ctx.lineTo(x, y);
+            ctx.lineTo(x, y - 1);
 
             ctx.stroke();
             ctx.fill();
