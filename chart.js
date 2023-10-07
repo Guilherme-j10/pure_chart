@@ -19,21 +19,49 @@ var initialize_chart = function (options) {
         return output[0] + (((value - input[0]) / (input[1] - input[0])) * (output[1] - output[0]));
     };
     var check_data_integrity = function () {
-        var amount_data = options.series[0].data.length;
-        var success = true;
-        for (var _i = 0, _a = options.series; _i < _a.length; _i++) {
-            var data = _a[_i];
-            if (data.data.length === amount_data)
-                continue;
-            success = false;
-            break;
-        }
-        if (success && !amount_data) {
-            for (var i = 0; i < options.series.length; i++) {
-                options.series[i].data = Array.from({ length: 12 }).map(function () { return 0; });
+        var validation = {
+            _success: true,
+            message: ''
+        };
+        if (options.chart.type === 'normal') {
+            for (var _i = 0, _a = options.series; _i < _a.length; _i++) {
+                var data = _a[_i];
+                if (typeof (data === null || data === void 0 ? void 0 : data.data_type) === 'undefined') {
+                    validation._success = false;
+                    validation.message = 'Invalid data_type.';
+                    break;
+                }
             }
         }
-        return success;
+        if (!validation._success)
+            return validation;
+        var amount_data = options.series[0].data.length;
+        for (var _b = 0, _c = options.series; _b < _c.length; _b++) {
+            var data = _c[_b];
+            if (data.data.length === amount_data)
+                continue;
+            validation._success = false;
+            validation.message = 'Your data length not is the same.';
+            break;
+        }
+        if (validation._success) {
+            if (!amount_data) {
+                for (var i = 0; i < options.series.length; i++) {
+                    options.series[i].data = Array.from({ length: 12 }).map(function () { return 0; });
+                }
+            }
+            var get_all_colors = options.series.map(function (data) { return data.color; });
+            for (var _d = 0, get_all_colors_1 = get_all_colors; _d < get_all_colors_1.length; _d++) {
+                var color = get_all_colors_1[_d];
+                var removed_prefix = color.split('#')[1];
+                if (removed_prefix.length === 6)
+                    continue;
+                validation._success = false;
+                validation.message = 'The colors provided need be a hex code of 6 char.';
+                break;
+            }
+        }
+        return validation;
     };
     var default_stroke_width = (((_a = options === null || options === void 0 ? void 0 : options.stroke_line_settings) === null || _a === void 0 ? void 0 : _a.width) || 3);
     var chart = {
@@ -50,18 +78,6 @@ var initialize_chart = function (options) {
         min_width: (options === null || options === void 0 ? void 0 : options.disable_sparklines) ? 0 : 30,
         current_labels: [],
         chart_column_pos: [],
-        chart_data_preset_validation: function () {
-            var _success = true;
-            var get_all_colors = options.series.map(function (data) { return data.color; });
-            for (var _i = 0, get_all_colors_1 = get_all_colors; _i < get_all_colors_1.length; _i++) {
-                var color = get_all_colors_1[_i];
-                var removed_prefix = color.split('#')[1];
-                if (removed_prefix.length === 6)
-                    continue;
-                _success = false;
-            }
-            return _success;
-        },
         draw_element: function (load) {
             var _a, _b, _c, _d, _e, _f, _g, _h, _j;
             ctx.beginPath();
@@ -465,19 +481,26 @@ var initialize_chart = function (options) {
                     }
                 }
             }
+        },
+        draw_basic_pie_chart: function () {
         }
     };
     var draw_everything = function () {
         ctx.clearRect(0, 0, options.chart.width, options.chart.height);
-        if (!(options === null || options === void 0 ? void 0 : options.disable_sparklines)) {
-            chart.draw_side_left_height_data();
-            chart.draw_activate_hover_columns();
-            chart.draw_base_chart();
-            chart.draw_spikes();
+        if (options.chart.type === 'pie') {
+            chart.draw_basic_pie_chart();
         }
-        chart.draw_columns();
-        if (!(options === null || options === void 0 ? void 0 : options.disable_sparklines))
-            chart.draw_tooltip();
+        if (options.chart.type === 'normal') {
+            if (!(options === null || options === void 0 ? void 0 : options.disable_sparklines)) {
+                chart.draw_side_left_height_data();
+                chart.draw_activate_hover_columns();
+                chart.draw_base_chart();
+                chart.draw_spikes();
+            }
+            chart.draw_columns();
+            if (!(options === null || options === void 0 ? void 0 : options.disable_sparklines))
+                chart.draw_tooltip();
+        }
     };
     var disable_all_columns = function () {
         for (var _i = 0, _a = chart.chart_column_pos; _i < _a.length; _i++) {
@@ -499,12 +522,9 @@ var initialize_chart = function (options) {
         draw_everything();
     };
     var data_is_ok = check_data_integrity();
-    var chart_data_preset_is_ok = chart.chart_data_preset_validation();
-    if (!chart_data_preset_is_ok)
-        console.error('Check your config');
-    if (!data_is_ok)
-        console.error('Check your provided data.');
-    if (data_is_ok && chart_data_preset_is_ok) {
+    if (!data_is_ok._success)
+        console.error(data_is_ok.message);
+    if (data_is_ok._success) {
         draw_everything();
         canvas.addEventListener('mousemove', on_mouse_move);
         canvas.addEventListener('mouseout', disable_all_columns);

@@ -40,8 +40,9 @@ const initialize = (props) => {
       }
     ],
     chart: {
-      width: 580,
-      height: 350
+      type: 'normal',
+      width: 380,
+      height: 250
     },
     ...props,
   };
@@ -104,4 +105,13 @@ initialize({
       data: Array.from({ length: 15 }).map(() => Math.floor(Math.random() * 50))
     }
   ],
+});
+
+initialize({ 
+  canvas: 'pie_2',
+  chart: {
+    type: 'pie',
+    width: 380,
+    height: 250
+  },
 });

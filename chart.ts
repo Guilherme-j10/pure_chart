@@ -1,12 +1,14 @@
+type BasicDataSet = {
+  data_label: string,
+  color: string,
+  data_type?: string,
+  data: number[]
+}
+
 type OptionsType = {
   canvas: string,
   label_tip?: string,
-  series: Array<{
-    data_label: string,
-    color: string,
-    data_type: string,
-    data: number[]
-  }>,
+  series: BasicDataSet[],
   hide_vertical_data_set?: boolean,
   enable_data_dots?: boolean,
   stroke_line_settings?: {
@@ -20,6 +22,7 @@ type OptionsType = {
   hermit_enable?: boolean
   labels?: string[],
   chart: {
+    type: "normal" | "pie" | "pie_interpolated" | "pie_lines"
     width: number,
     height: number
   }
@@ -33,6 +36,11 @@ type ChartColumnPos = {
   pos: { x: number, y: number, h: number, w: number },
   index: number,
   is_activate: boolean
+}
+
+type ValidationChartStructure = {
+  _success: boolean,
+  message: string
 }
 
 type DrawElementTypes = {
@@ -68,31 +76,72 @@ const initialize_chart = (options: OptionsType): ChartType => {
 
   }
 
-  const check_data_integrity = (): boolean => {
+  const check_data_integrity = (): ValidationChartStructure => {
 
-    const amount_data = options.series[0].data.length;
-    let success = true;
+    let validation: ValidationChartStructure = {
+      _success: true,
+      message: ''
+    };
 
-    for (const data of options.series) {
+    if (options.chart.type === 'normal') {
 
-      if (data.data.length === amount_data) continue;
+      for (const data of options.series) {
 
-      success = false;
-      break;
+        if (typeof data?.data_type === 'undefined') {
 
-    }
+          validation._success = false;
+          validation.message = 'Invalid data_type.';
+          break;
 
-    if (success && !amount_data) {
-
-      for (let i = 0; i < options.series.length; i++) {
-
-        options.series[i].data = Array.from({ length: 12 }).map(() => 0);
+        }
 
       }
 
     }
 
-    return success;
+    if (!validation._success) return validation;
+
+    const amount_data = options.series[0].data.length;
+
+    for (const data of options.series) {
+
+      if (data.data.length === amount_data) continue;
+
+      validation._success = false;
+      validation.message = 'Your data length not is the same.'
+      break;
+
+    }
+
+    if (validation._success) {
+
+      if (!amount_data) {
+
+        for (let i = 0; i < options.series.length; i++) {
+
+          options.series[i].data = Array.from({ length: 12 }).map(() => 0);
+
+        }
+
+      }
+
+      const get_all_colors = options.series.map(data => data.color);
+
+      for (const color of get_all_colors) {
+
+        const removed_prefix = color.split('#')[1];
+
+        if (removed_prefix.length === 6) continue;
+
+        validation._success = false;
+        validation.message = 'The colors provided need be a hex code of 6 char.'
+        break;
+
+      }
+
+    }
+
+    return validation;
 
   }
 
@@ -112,24 +161,6 @@ const initialize_chart = (options: OptionsType): ChartType => {
     min_width: options?.disable_sparklines ? 0 : 30,
     current_labels: [] as string[],
     chart_column_pos: [] as ChartColumnPos[],
-    chart_data_preset_validation() {
-
-      let _success = true;
-      const get_all_colors = options.series.map(data => data.color);
-
-      for (const color of get_all_colors) {
-
-        const removed_prefix = color.split('#')[1];
-
-        if (removed_prefix.length === 6) continue;
-
-        _success = false;
-
-      }
-
-      return _success
-
-    },
     draw_element(load: DrawElementTypes) {
 
       ctx.beginPath();
@@ -570,7 +601,7 @@ const initialize_chart = (options: OptionsType): ChartType => {
       const diff_from_base = Math.abs(options.chart.height - this.line_base_height);
       this.enable_height = options.chart.height - diff_from_base - this.margin_borders;
 
-      if (options?.hide_vertical_data_set === true) return; 
+      if (options?.hide_vertical_data_set === true) return;
 
       const { get_max_value, vertical_data } = this.calculate_max_value_enabled();
 
@@ -731,6 +762,11 @@ const initialize_chart = (options: OptionsType): ChartType => {
 
       }
 
+    },
+    draw_basic_pie_chart() {
+
+      
+
     }
   }
 
@@ -738,19 +774,29 @@ const initialize_chart = (options: OptionsType): ChartType => {
 
     ctx.clearRect(0, 0, options.chart.width, options.chart.height);
 
-    if (!options?.disable_sparklines) {
+    if (options.chart.type === 'pie') {
 
-      chart.draw_side_left_height_data();
-      chart.draw_activate_hover_columns();
-      chart.draw_base_chart();
-      chart.draw_spikes();
+      chart.draw_basic_pie_chart();
 
     }
 
-    chart.draw_columns();
+    if (options.chart.type === 'normal') {
 
-    if (!options?.disable_sparklines)
-      chart.draw_tooltip();
+      if (!options?.disable_sparklines) {
+
+        chart.draw_side_left_height_data();
+        chart.draw_activate_hover_columns();
+        chart.draw_base_chart();
+        chart.draw_spikes();
+
+      }
+
+      chart.draw_columns();
+
+      if (!options?.disable_sparklines)
+        chart.draw_tooltip();
+
+    }
 
   }
 
@@ -795,12 +841,10 @@ const initialize_chart = (options: OptionsType): ChartType => {
   }
 
   const data_is_ok = check_data_integrity();
-  const chart_data_preset_is_ok = chart.chart_data_preset_validation();
-  
-  if (!chart_data_preset_is_ok) console.error('Check your config');
-  if (!data_is_ok) console.error('Check your provided data.')
 
-  if (data_is_ok && chart_data_preset_is_ok) {
+  if (!data_is_ok._success) console.error(data_is_ok.message);
+
+  if (data_is_ok._success) {
 
     draw_everything();
 
