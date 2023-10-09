@@ -108,9 +108,70 @@ initialize({
 });
 
 initialize({ 
-  canvas: 'pie_2',
+  canvas: 'pie_1',
+  series: [
+    {
+      data_label: 'Propaganda',
+      data_type: 'column',
+      color: '#fbad06',
+      data: Array.from({ length: 1 }).map(() => Math.floor(Math.random() * 100))
+    },
+    {
+      data_label: 'Propaganda',
+      data_type: 'column',
+      color: '#ab33f5',
+      data: Array.from({ length: 1 }).map(() => Math.floor(Math.random() * 100))
+    },
+    {
+      data_label: 'Propaganda',
+      data_type: 'column',
+      color: '#50acfd',
+      data: Array.from({ length: 1 }).map(() => Math.floor(Math.random() * 100))
+    },
+    {
+      data_label: 'Notificação',
+      data_type: 'column',
+      color: '#b7e844',
+      data: Array.from({ length: 1 }).map(() => Math.floor(Math.random() * 100))
+    }
+  ],
   chart: {
-    type: 'pie',
+    type: 'pie_lines',
+    width: 380,
+    height: 250
+  },
+});
+
+initialize({ 
+  canvas: 'pie_2',
+  series: [
+    {
+      data_label: 'Propaganda',
+      data_type: 'column',
+      color: '#fbad06',
+      data: Array.from({ length: 1 }).map(() => Math.floor(Math.random() * 50))
+    },
+    {
+      data_label: 'Propaganda',
+      data_type: 'column',
+      color: '#ab33f5',
+      data: Array.from({ length: 1 }).map(() => Math.floor(Math.random() * 50))
+    },
+    {
+      data_label: 'Propaganda',
+      data_type: 'column',
+      color: '#50acfd',
+      data: Array.from({ length: 1 }).map(() => Math.floor(Math.random() * 50))
+    },
+    {
+      data_label: 'Notificação',
+      data_type: 'column',
+      color: '#b7e844',
+      data: Array.from({ length: 1 }).map(() => Math.floor(Math.random() * 50))
+    }
+  ],
+  chart: {
+    type: 'pie_interpolated',
     width: 380,
     height: 250
   },

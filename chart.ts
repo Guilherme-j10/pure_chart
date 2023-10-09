@@ -43,6 +43,23 @@ type ValidationChartStructure = {
   message: string
 }
 
+type DrawArcType = {
+  line_width: number,
+  x: number,
+  y: number,
+  radius_size: number
+  color: string,
+  initial: number,
+  final: number
+}
+
+type ArcsData = {
+  inital: number,
+  final: number,
+  color: string,
+  width: number
+}
+
 type DrawElementTypes = {
   color: string,
   text?: {
@@ -82,6 +99,38 @@ const initialize_chart = (options: OptionsType): ChartType => {
       _success: true,
       message: ''
     };
+
+    if (["pie", "pie_interpolated", "pie_lines"].includes(options.chart.type)) {
+
+      for (const data of options.series) {
+
+        if (data.data.length > 1) {
+
+          validation._success = false;
+          validation.message = 'Pie type dont need more than one element on array.';
+          break;
+
+        }
+
+      }
+
+      if (options.chart.type === "pie_lines") {
+
+        for (const data of options.series) {
+
+          if (data.data[0] > 100) {
+  
+            validation._success = false;
+            validation.message = 'Pie_line accepts values up to 100.';
+            break;
+  
+          }
+  
+        }
+
+      }
+
+    }
 
     if (options.chart.type === 'normal') {
 
@@ -153,6 +202,7 @@ const initialize_chart = (options: OptionsType): ChartType => {
     size_text_tip: 13,
     padding_top: 22,
     margin_borders: 10,
+    min_side_by_side: 0,
     default_stroke_style: {
       width: default_stroke_width,
     },
@@ -763,9 +813,100 @@ const initialize_chart = (options: OptionsType): ChartType => {
       }
 
     },
-    draw_basic_pie_chart() {
+    define_min_side() {
 
-      
+      const w = options.chart.width;
+      const h = options.chart.height;
+      this.min_side_by_side = w < h ? w : h;
+
+    },
+    draw_arc (props: DrawArcType) {
+
+      const convert_degree_rad = (val: number) => val * (Math.PI / 180);
+
+      ctx.beginPath();
+      ctx.lineWidth = props.line_width;
+      ctx.strokeStyle = props.color;
+      ctx.arc(
+        props.x,
+        props.y,
+        props.radius_size,
+        convert_degree_rad(props.initial),
+        convert_degree_rad(props.final)
+      );
+      ctx.stroke();
+      ctx.closePath();
+
+    },
+    interpolated_pie() {
+
+      let arc_data = [] as ArcsData[];
+      const max_value_chart = options.series.reduce((acc, data) => acc+=data.data[0] ,0)
+
+      for (const current_data of options.series) {
+
+        const arc_current = {} as ArcsData;
+
+        const width = interpolation(current_data.data[0], [0, max_value_chart], [20, 70]);
+        const final_degree = interpolation(current_data.data[0], [0, max_value_chart], [0, 360]);
+
+        arc_current.width = width;
+        arc_current.color = current_data.color,
+        arc_current.inital = arc_data[arc_data.length - 1]?.final || 0;
+        arc_current.final = arc_current.inital + final_degree;
+
+        arc_data.push(arc_current);
+
+      }
+
+      const high_radius = arc_data.reduce((acc, val) => acc > val.width ? acc : val.width, 0);
+
+      for(const arc of arc_data) {
+
+        this.draw_arc({
+          color: arc.color,
+          final: arc.final,
+          initial: arc.inital,
+          x: options.chart.width / 2,
+          y: options.chart.height / 2,
+          line_width: arc.width,
+          radius_size: (this.min_side_by_side / 2) - (high_radius / 2)
+        });
+
+      }
+
+    },
+    pie_lines () {
+
+      const space_by_line = 6;
+      const line_width = 10;
+
+      for (let i = 0; i < options.series.length; i++) {
+
+        const current_serie = options.series[i];
+        const convert_to = this.get_rgb_color(current_serie.color);
+        const radius = (this.min_side_by_side / 2) - (line_width / 2) - ((space_by_line + line_width) * i)
+
+        let current_arc_data: DrawArcType = {
+          color: `rgb(${convert_to?.r}, ${convert_to?.g}, ${convert_to?.b}, 0.1)`,
+          x: options.chart.width / 2,
+          y: options.chart.height / 2,
+          line_width: line_width,
+          initial: 0,
+          final: 360,
+          radius_size: radius
+        };
+
+        this.draw_arc(current_arc_data);
+
+        const final_degree = interpolation(current_serie.data[0], [0, 100], [0, 360]);
+
+        current_arc_data.color = current_serie.color;
+        current_arc_data.final = final_degree;
+
+        this.draw_arc(current_arc_data);
+
+      }
 
     }
   }
@@ -774,9 +915,17 @@ const initialize_chart = (options: OptionsType): ChartType => {
 
     ctx.clearRect(0, 0, options.chart.width, options.chart.height);
 
-    if (options.chart.type === 'pie') {
+    chart.define_min_side();
 
-      chart.draw_basic_pie_chart();
+    if (options.chart.type === 'pie_lines') {
+
+      chart.pie_lines();
+
+    }
+
+    if (options.chart.type === 'pie_interpolated') {
+
+      chart.interpolated_pie();
 
     }
 

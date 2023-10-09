@@ -23,9 +23,29 @@ var initialize_chart = function (options) {
             _success: true,
             message: ''
         };
-        if (options.chart.type === 'normal') {
+        if (["pie", "pie_interpolated", "pie_lines"].includes(options.chart.type)) {
             for (var _i = 0, _a = options.series; _i < _a.length; _i++) {
                 var data = _a[_i];
+                if (data.data.length > 1) {
+                    validation._success = false;
+                    validation.message = 'Pie type dont need more than one element on array.';
+                    break;
+                }
+            }
+            if (options.chart.type === "pie_lines") {
+                for (var _b = 0, _c = options.series; _b < _c.length; _b++) {
+                    var data = _c[_b];
+                    if (data.data[0] > 100) {
+                        validation._success = false;
+                        validation.message = 'Pie_line accepts values up to 100.';
+                        break;
+                    }
+                }
+            }
+        }
+        if (options.chart.type === 'normal') {
+            for (var _d = 0, _e = options.series; _d < _e.length; _d++) {
+                var data = _e[_d];
                 if (typeof (data === null || data === void 0 ? void 0 : data.data_type) === 'undefined') {
                     validation._success = false;
                     validation.message = 'Invalid data_type.';
@@ -36,8 +56,8 @@ var initialize_chart = function (options) {
         if (!validation._success)
             return validation;
         var amount_data = options.series[0].data.length;
-        for (var _b = 0, _c = options.series; _b < _c.length; _b++) {
-            var data = _c[_b];
+        for (var _f = 0, _g = options.series; _f < _g.length; _f++) {
+            var data = _g[_f];
             if (data.data.length === amount_data)
                 continue;
             validation._success = false;
@@ -51,8 +71,8 @@ var initialize_chart = function (options) {
                 }
             }
             var get_all_colors = options.series.map(function (data) { return data.color; });
-            for (var _d = 0, get_all_colors_1 = get_all_colors; _d < get_all_colors_1.length; _d++) {
-                var color = get_all_colors_1[_d];
+            for (var _h = 0, get_all_colors_1 = get_all_colors; _h < get_all_colors_1.length; _h++) {
+                var color = get_all_colors_1[_h];
                 var removed_prefix = color.split('#')[1];
                 if (removed_prefix.length === 6)
                     continue;
@@ -70,6 +90,7 @@ var initialize_chart = function (options) {
         size_text_tip: 13,
         padding_top: 22,
         margin_borders: 10,
+        min_side_by_side: 0,
         default_stroke_style: {
             width: default_stroke_width,
         },
@@ -482,13 +503,81 @@ var initialize_chart = function (options) {
                 }
             }
         },
-        draw_basic_pie_chart: function () {
+        define_min_side: function () {
+            var w = options.chart.width;
+            var h = options.chart.height;
+            this.min_side_by_side = w < h ? w : h;
+        },
+        draw_arc: function (props) {
+            var convert_degree_rad = function (val) { return val * (Math.PI / 180); };
+            ctx.beginPath();
+            ctx.lineWidth = props.line_width;
+            ctx.strokeStyle = props.color;
+            ctx.arc(props.x, props.y, props.radius_size, convert_degree_rad(props.initial), convert_degree_rad(props.final));
+            ctx.stroke();
+            ctx.closePath();
+        },
+        interpolated_pie: function () {
+            var _a;
+            var arc_data = [];
+            var max_value_chart = options.series.reduce(function (acc, data) { return acc += data.data[0]; }, 0);
+            for (var _i = 0, _b = options.series; _i < _b.length; _i++) {
+                var current_data = _b[_i];
+                var arc_current = {};
+                var width = interpolation(current_data.data[0], [0, max_value_chart], [20, 70]);
+                var final_degree = interpolation(current_data.data[0], [0, max_value_chart], [0, 360]);
+                arc_current.width = width;
+                arc_current.color = current_data.color,
+                    arc_current.inital = ((_a = arc_data[arc_data.length - 1]) === null || _a === void 0 ? void 0 : _a.final) || 0;
+                arc_current.final = arc_current.inital + final_degree;
+                arc_data.push(arc_current);
+            }
+            var high_radius = arc_data.reduce(function (acc, val) { return acc > val.width ? acc : val.width; }, 0);
+            for (var _c = 0, arc_data_1 = arc_data; _c < arc_data_1.length; _c++) {
+                var arc = arc_data_1[_c];
+                this.draw_arc({
+                    color: arc.color,
+                    final: arc.final,
+                    initial: arc.inital,
+                    x: options.chart.width / 2,
+                    y: options.chart.height / 2,
+                    line_width: arc.width,
+                    radius_size: (this.min_side_by_side / 2) - (high_radius / 2)
+                });
+            }
+        },
+        pie_lines: function () {
+            var space_by_line = 6;
+            var line_width = 10;
+            for (var i = 0; i < options.series.length; i++) {
+                var current_serie = options.series[i];
+                var convert_to = this.get_rgb_color(current_serie.color);
+                var radius = (this.min_side_by_side / 2) - (line_width / 2) - ((space_by_line + line_width) * i);
+                var current_arc_data = {
+                    color: "rgb(".concat(convert_to === null || convert_to === void 0 ? void 0 : convert_to.r, ", ").concat(convert_to === null || convert_to === void 0 ? void 0 : convert_to.g, ", ").concat(convert_to === null || convert_to === void 0 ? void 0 : convert_to.b, ", 0.1)"),
+                    x: options.chart.width / 2,
+                    y: options.chart.height / 2,
+                    line_width: line_width,
+                    initial: 0,
+                    final: 360,
+                    radius_size: radius
+                };
+                this.draw_arc(current_arc_data);
+                var final_degree = interpolation(current_serie.data[0], [0, 100], [0, 360]);
+                current_arc_data.color = current_serie.color;
+                current_arc_data.final = final_degree;
+                this.draw_arc(current_arc_data);
+            }
         }
     };
     var draw_everything = function () {
         ctx.clearRect(0, 0, options.chart.width, options.chart.height);
-        if (options.chart.type === 'pie') {
-            chart.draw_basic_pie_chart();
+        chart.define_min_side();
+        if (options.chart.type === 'pie_lines') {
+            chart.pie_lines();
+        }
+        if (options.chart.type === 'pie_interpolated') {
+            chart.interpolated_pie();
         }
         if (options.chart.type === 'normal') {
             if (!(options === null || options === void 0 ? void 0 : options.disable_sparklines)) {
